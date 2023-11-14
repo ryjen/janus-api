@@ -1,0 +1,132 @@
+service: janus
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+configValidationMode: error
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: "3"
+
+useDotenv: true
+
+package:
+  individually: true
+
+provider:
+  name: aws
+  runtime: dotnet6
+
+  stage: dev
+  region: ca-central-1
+
+  apiGateway:
+    apiKeySourceType: HEADER
+    apiKeys:
+      - name: "janus-api-key"
+        value: ${env:API_KEY}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DescribeTable
+          Resource:
+            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
+            - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Account"
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminInitiateAuth
+          Resource:
+            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
+            - Fn::GetAtt: ["AccountPool", "Arn"]
+
+functions:
+  authenticate:
+    handler: GameplayDataSystem::Janus.ImmutableAuth::Authenticate
+    events:
+      - http:
+          path: /authenticate
+          method: post
+          cors: true
+          private: true
+    environment:
+      USER_POOL_ID: !Ref AccountPool
+      CLIENT_ID: !Ref AccountPoolClient
+
+    package:
+      artifact: bin/Release/net6.0/auth.zip
+
+resources:
+  Resources:
+    AccountTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Account
+        AttributeDefinitions:
+          - AttributeName: AccountID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: AccountID
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    AccountPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: janus-pool
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireUppercase: true
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+        Schema:
+          - AttributeDataType: String
+            Name: email
+            Required: true
+        AutoVerifiedAttributes: ["email"]
+        MfaConfiguration: OFF
+        SmsAuthenticationMessage: "Your verification code is {####}"
+        SmsVerificationMessage: "Your verification code is {####}"
+        EmailVerificationMessage: "Your verification code is {####}"
+        EmailVerificationSubject: "Verify your email for our awesome app!"
+        UsernameAttributes:
+          - email
+
+    AccountPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: janus-pool-client
+        UserPoolId:
+          Ref: AccountPool
+        GenerateSecret: false
+        ExplicitAuthFlows:
+          - "ADMIN_NO_SRP_AUTH"
+
+    AccountPoolAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        IdentitySource: method.request.header.Authorization
+        RestApiId:
+          Ref: AccountApiGateway
+        ProviderARNs:
+          - Fn::GetAtt:
+              - AccountPool
+              - Arn
+
+    AccountApiGateway:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: janus-api-gateway
+        FailOnWarnings: true
