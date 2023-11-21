@@ -22,6 +22,10 @@ Use the `aws configure` cli and command to configure aws and login.
 
 For more details see [aws quickstart](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) or [serverless docs](https://www.serverless.com/framework/docs).
 
+### 4. Dotnet Core 6
+
+Install `dotnet core` for your system.
+
 ## Dev
 
 ### 1. `./build.sh`
