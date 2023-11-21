@@ -1,0 +1,10 @@
+{
+  "resource": "/",
+  "path": "/",
+  "httpMethod": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Api-Key": "40c7b0ced5b65437f58f776f2e6fd7edb5466fbcf0bde3446e920833ac74e979"
+  },
+  "body": "{\"account\":\"ryjen@duck.com\",\"password\":\"P@ssw0rd!\"}"
+}

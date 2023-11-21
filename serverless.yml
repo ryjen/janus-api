@@ -48,17 +48,21 @@ provider:
 
 functions:
   authenticate:
-    handler: GameplayDataSystem::Janus.ImmutableAuth::Authenticate
+    handler: GameplayDataSystem::Janus.Auth::Handler
     events:
       - http:
           path: /authenticate
           method: post
           cors: true
           private: true
+      - http:
+          path: /reset
+          method: post
+          cors: true
+          private: true
     environment:
       USER_POOL_ID: !Ref AccountPool
       CLIENT_ID: !Ref AccountPoolClient
-
     package:
       artifact: bin/Release/net6.0/auth.zip
 

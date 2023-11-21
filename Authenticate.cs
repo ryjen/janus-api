@@ -1,0 +1,48 @@
+
+using Amazon.Lambda.APIGatewayEvents;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
+
+namespace Janus;
+
+using RequestParams = Dictionary<string, string>;
+
+public partial class Auth
+{
+    public async Task<APIGatewayProxyResponse> Authenticate(RequestParams request)
+    {
+        try
+        {
+            string account = request["account"];
+            string password = request["password"];
+
+            var authRequest = new AdminInitiateAuthRequest
+            {
+                UserPoolId = userPoolId,
+                ClientId = clientId,
+                AuthFlow = AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
+                AuthParameters = new Dictionary<string, string>
+                {
+                    {"USERNAME", account},
+                    {"PASSWORD", password}
+                }
+            };
+            var authResponse = await _cognitoClient.AdminInitiateAuthAsync(authRequest);
+
+            log(authResponse);
+
+            if (authResponse.ChallengeName != null)
+            {
+                return Challenged(authResponse.ChallengeName, authResponse.Session);
+            }
+
+            string token = authResponse.AuthenticationResult.IdToken;
+
+            return Response(200, new { Token = token });
+        }
+        catch (Exception ex)
+        {
+            return Response(401, new { Message = "Authentication failed", Error = ex.Message });
+        }
+    }
+}
