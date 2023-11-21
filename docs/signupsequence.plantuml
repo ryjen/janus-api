@@ -1,0 +1,19 @@
+
+@startuml
+    skinparam monochrome true
+    User -> Janus: Signup Request
+    Janus -> Cognito: Signup Request
+    Cognito -> Janus: Signup Response
+    Janus -> DynamoDB: Create account
+    Janus -> User: Signup Response
+    User -> Janus: Authenticate New User
+    Janus -> Cognito: Authenticate Request
+    Cognito -> Janus: Challenge New Password
+    Janus -> Cognito: Challenge Response
+    Cognito -> Janus: Authenticate Response
+    Janus -> User: Authenticate Response
+    User -> Janus: Authenticate Existing User
+    Janus -> Cognito: Authenticate Request
+    Cognito -> Janus: Authenticate Response
+    Janus -> User: Authenticate Response
+    @enduml

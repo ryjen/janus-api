@@ -1,0 +1,31 @@
+@startuml
+class User {
+  -String id
+  -String email
+  -String password
+  -String phone
+  +authenticate()
+  +newPassword()
+  +signUp()
+}
+
+note right
+  Users exist in cognito
+  with verified fields
+end note
+
+class Account {
+   - String accountID
+   - String email
+   - String subscription
+   - etc
+}
+
+note right
+  User id to account id in
+  one to one mapping
+end note
+
+User "1" -- "1" Account
+
+@enduml
