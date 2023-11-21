@@ -36,9 +36,9 @@ Build the function package
 
 Deploy the package
 
-### 3. `serverless invoke -f janus -p data/authenticate.json`
+### 3. `serverless log -f janus`
 
-Test the authenticate lambda with some sample data
+Get the logs
 
 ## API
 
