@@ -2,6 +2,7 @@
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Janus;
 
@@ -9,7 +10,9 @@ partial class Auth
 {
     protected static APIGatewayProxyResponse Response(int status, Object body)
     {
-        var responseBody = JsonConvert.SerializeObject(body);
+        var serializerSettings = new JsonSerializerSettings();
+        serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+        var responseBody = JsonConvert.SerializeObject(body, serializerSettings);
 
         return new APIGatewayProxyResponse
         {

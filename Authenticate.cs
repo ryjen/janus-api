@@ -13,17 +13,17 @@ public partial class Auth
     {
         try
         {
-            string account = request["account"];
+            string email = request["email"];
             string password = request["password"];
 
             var authRequest = new AdminInitiateAuthRequest
             {
                 UserPoolId = userPoolId,
                 ClientId = clientId,
-                AuthFlow = AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
+                AuthFlow = AuthFlowType.ADMIN_NO_SRP_AUTH,
                 AuthParameters = new Dictionary<string, string>
                 {
-                    {"USERNAME", account},
+                    {"USERNAME", email},
                     {"PASSWORD", password}
                 }
             };

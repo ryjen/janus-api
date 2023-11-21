@@ -13,7 +13,7 @@ public partial class Auth
     {
         try
         {
-            string account = request["account"];
+            string email = request["email"];
             string password = request["password"];
             string session = request["session"];
 
@@ -23,8 +23,8 @@ public partial class Auth
                 ClientId = clientId,
                 UserPoolId = userPoolId,
                 ChallengeResponses = new Dictionary<string, string> {
-                    {"USERNAME", account},
-                    {"PASSWORD", password}
+                    {"USERNAME", email},
+                    {"NEW_PASSWORD", password}
                 },
                 Session = session
             };
