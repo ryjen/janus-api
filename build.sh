@@ -8,4 +8,5 @@ fi
 
 dotnet restore
 dotnet tool install -g Amazon.Lambda.Tools --framework net6.0 2>/dev/null
-dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/auth.zip
+dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/auth.zip --cmd auth || exit
+dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/account.zip --cmd account

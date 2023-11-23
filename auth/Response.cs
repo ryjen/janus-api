@@ -6,22 +6,10 @@ using Newtonsoft.Json.Serialization;
 
 namespace Janus;
 
+using static Shared;
+
 partial class Auth
 {
-    protected static APIGatewayProxyResponse Response(int status, Object body)
-    {
-        var serializerSettings = new JsonSerializerSettings();
-        serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-        var responseBody = JsonConvert.SerializeObject(body, serializerSettings);
-
-        return new APIGatewayProxyResponse
-        {
-            StatusCode = status,
-            Body = responseBody,
-            Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
-        };
-    }
-
     protected static APIGatewayProxyResponse Challenged(ChallengeNameType type, string session)
     {
         var errors = new Dictionary<ChallengeNameType, string>

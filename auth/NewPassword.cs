@@ -4,6 +4,7 @@ using Amazon.CognitoIdentityProvider.Model;
 
 namespace Janus;
 
+using static Shared;
 using RequestParams = Dictionary<string, string>;
 
 public partial class Auth
@@ -30,9 +31,7 @@ public partial class Auth
             };
             var authResponse = await _cognitoClient.AdminRespondToAuthChallengeAsync(newPasswordRequest);
 
-            log(authResponse);
-
-            string token = authResponse.AuthenticationResult.IdToken;
+            string token = authResponse.AuthenticationResult.AccessToken;
 
             return Response(200, new { Token = token });
         }
