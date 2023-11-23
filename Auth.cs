@@ -19,23 +19,35 @@ public partial class Auth
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        var requestParams = JsonConvert.DeserializeObject<RequestParams>(request.Body);
 
         switch (request.Path)
         {
-            case "/authenticate":
-                return await Authenticate(requestParams);
-            case "/reset":
-                return await NewPassword(requestParams);
-            case "/signup":
-                return await SignUp(requestParams);
-            default:
-                return Response(401, new { Message = "Authentication failed", Error = "unknown path" });
+        case "/authenticate":
+            return await Authenticate(requestParams(request));
+        case "/reset":
+            return await NewPassword(requestParams(request));
+        case "/signup":
+            return await SignUp(requestParams(request));
+        case "/account":
+            return await Account(authToken(request));
+        default:
+            return Response(401, new { Message = "Authentication failed", Error = "unknown path" });
         }
     }
 
     public void log(Object obj)
     {
         System.Console.WriteLine("{0}", JsonConvert.SerializeObject(obj));
+    }
+
+    private RequestParams requestParams(APIGatewayProxyRequest request)
+    {
+
+        return JsonConvert.DeserializeObject<RequestParams>(request.Body);
+    }
+
+    private string authToken(APIGatewayProxyRequest request)
+    {
+        return request.Headers["Authorization"].Replace("Bearer ", "");
     }
 }

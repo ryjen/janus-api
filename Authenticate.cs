@@ -36,7 +36,7 @@ public partial class Auth
                 return Challenged(authResponse.ChallengeName, authResponse.Session);
             }
 
-            string token = authResponse.AuthenticationResult.IdToken;
+            string token = authResponse.AuthenticationResult.AccessToken;
 
             return Response(200, new { Token = token });
         }
