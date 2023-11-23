@@ -4,6 +4,7 @@ using Amazon.CognitoIdentityProvider.Model;
 
 namespace Janus;
 
+using static Shared;
 using RequestParams = Dictionary<string, string>;
 
 public partial class Auth
@@ -35,7 +36,7 @@ public partial class Auth
             var sub = authResponse.User.Attributes.Find(x => x.Name == "sub").Value;
 
             // TODO: handle errors and rollback
-            var _ = await CreateAccount(sub, email);
+            Account.CreateAccount(new { Id = sub, Email = email});
 
             // TODO: use models
             return Response(200, new { AccountID = sub, Email = email });

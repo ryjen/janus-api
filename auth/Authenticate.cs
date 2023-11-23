@@ -5,6 +5,7 @@ using Amazon.CognitoIdentityProvider.Model;
 
 namespace Janus;
 
+using static Shared;
 using RequestParams = Dictionary<string, string>;
 
 public partial class Auth

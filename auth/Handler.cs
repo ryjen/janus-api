@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 
 namespace Janus;
 
+using static Shared;
 using RequestParams = Dictionary<string, string>;
 
 public partial class Auth
@@ -23,31 +24,13 @@ public partial class Auth
         switch (request.Path)
         {
         case "/authenticate":
-            return await Authenticate(requestParams(request));
+            return await Authenticate(request.ToParams());
         case "/reset":
-            return await NewPassword(requestParams(request));
+            return await NewPassword(request.ToParams());
         case "/signup":
-            return await SignUp(requestParams(request));
-        case "/account":
-            return await Account(authToken(request));
+            return await SignUp(request.ToParams());
         default:
             return Response(401, new { Message = "Authentication failed", Error = "unknown path" });
         }
-    }
-
-    public void log(Object obj)
-    {
-        System.Console.WriteLine("{0}", JsonConvert.SerializeObject(obj));
-    }
-
-    private RequestParams requestParams(APIGatewayProxyRequest request)
-    {
-
-        return JsonConvert.DeserializeObject<RequestParams>(request.Body);
-    }
-
-    private string authToken(APIGatewayProxyRequest request)
-    {
-        return request.Headers["Authorization"].Replace("Bearer ", "");
     }
 }
