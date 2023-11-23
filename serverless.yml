@@ -80,10 +80,10 @@ resources:
       Properties:
         TableName: Account
         AttributeDefinitions:
-          - AttributeName: ID
+          - AttributeName: Id
             AttributeType: S
         KeySchema:
-          - AttributeName: ID
+          - AttributeName: Id
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 5
