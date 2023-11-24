@@ -52,6 +52,7 @@ provider:
         - Effect: Allow
           Action:
             - sqs:createqueue
+            - sqs:sendmessage
           Resource:
             - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::GetAtt: ["JanusQueue", "Arn"]

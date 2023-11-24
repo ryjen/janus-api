@@ -62,6 +62,9 @@ public partial class Auth
             MessageBody = JsonConvert.SerializeObject(message)
 
         };
+
+        log(string.Format("sending {0} to {1}", message, _sqsUrl));
+
         await _sqs.SendMessageAsync(request);
     }
 }
