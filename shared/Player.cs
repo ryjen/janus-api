@@ -11,6 +11,13 @@ namespace Janus.Model
             get;
             set;
         }
+
+        [DynamoDBProperty]
+        public string AccountId
+        {
+            get;
+            set;
+        }
         [DynamoDBProperty]
         public string Location
         {

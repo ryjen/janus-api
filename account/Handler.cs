@@ -15,13 +15,13 @@ public partial class Account
     {
         switch (request.HttpMethod)
         {
-        case "GET":
-            return await Read(request.AuthToken());
-        case "POST":
-        case "PUT":
-            return await Update(request.ToParams());
-        case "DELETE":
-            return await Delete(request.AuthToken());
+            case "GET":
+                return await Read(request.AuthToken());
+            case "POST":
+            case "PUT":
+                return await Update(request.ToParams());
+            case "DELETE":
+                return await Delete(request.AuthToken());
 
         }
 
