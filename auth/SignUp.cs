@@ -1,16 +1,20 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+using Newtonsoft.Json;
 
 namespace Janus;
 
 using static Shared;
-using Account = Model.Account;
 using RequestParams = Dictionary<string, string>;
 
 public partial class Auth
 {
     private readonly Database _db = new Database();
+    private readonly IAmazonSQS _sqs = new AmazonSQSClient();
+    private readonly string _sqsUrl = Environment.GetEnvironmentVariable("QUEUE_URL");
 
     public async Task<APIGatewayProxyResponse> SignUp(RequestParams request)
     {
@@ -27,7 +31,7 @@ public partial class Auth
 
             var authRequest = new AdminCreateUserRequest
             {
-                UserPoolId = userPoolId,
+                UserPoolId = _userPoolId,
                 Username = email,
                 TemporaryPassword = password,
                 MessageAction = "SUPPRESS",
@@ -37,11 +41,9 @@ public partial class Auth
             var authResponse = await _cognitoClient.AdminCreateUserAsync(authRequest);
 
             var sub = authResponse.User.Attributes.Find(x => x.Name == "sub").Value;
+            var account = new { Id = sub, Email = email };
 
-            // TODO: use SQS events
-            var account = new Account { Id = sub, Email = email };
-
-            await _db.Save(account);
+            await SendNewAccount(account);
 
             return Response(200, account);
         }
@@ -50,5 +52,16 @@ public partial class Auth
             // TODO: handle rollback
             return Response(401, new { Message = "Authentication failed", Error = ex.Message });
         }
+    }
+
+    private async Task SendNewAccount(object message)
+    {
+        var request = new SendMessageRequest
+        {
+            QueueUrl = _sqsUrl,
+            MessageBody = JsonConvert.SerializeObject(message)
+
+        };
+        await _sqs.SendMessageAsync(request);
     }
 }
