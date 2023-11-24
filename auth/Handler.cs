@@ -1,14 +1,12 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
-using Newtonsoft.Json;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace Janus;
 
 using static Shared;
-using RequestParams = Dictionary<string, string>;
 
 public partial class Auth
 {

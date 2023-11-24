@@ -67,11 +67,6 @@ functions:
           method: post
           cors: true
           private: true
-      - http:
-          path: /account
-          method: get
-          cors: true
-          private: true
     environment:
       USER_POOL_ID: !Ref AccountPool
       CLIENT_ID: !Ref AccountPoolClient
@@ -83,6 +78,21 @@ functions:
       - http:
           path: /account
           method: post
+          cors: true
+          private: true
+      - http:
+          path: /account
+          method: get
+          cors: true
+          private: true
+      - http:
+          path: /account
+          method: delete
+          cors: true
+          private: true
+      - http:
+          path: /account
+          method: put
           cors: true
           private: true
     package:

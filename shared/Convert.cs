@@ -1,5 +1,6 @@
 
 using Amazon.Lambda.APIGatewayEvents;
+using System.IdentityModel.Tokens.Jwt;
 using Newtonsoft.Json;
 
 namespace Janus;
@@ -15,6 +16,12 @@ public static partial class Convert
 
     public static string AuthToken(this APIGatewayProxyRequest request)
     {
-        return request.Headers["Authorization"].Replace("Bearer ", "");
+        var auth = request.Headers["Authorization"].Replace("Bearer ", "");
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(auth);
+
+        Shared.log(token);
+
+        return token.Payload.Sub;
     }
 }
