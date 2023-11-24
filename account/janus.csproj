@@ -9,6 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!--
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.2.0" />
     <PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.0" />
@@ -16,10 +17,15 @@
     <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="2.1.0" />
     <PackageReference Include="AWSSDK.CognitoIdentityProvider" Version="3.7.300.1" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.0" />
-  </ItemGroup>
+    </ItemGroup>
+    -->
 
   <ItemGroup>
     <Using Include="Amazon.Lambda.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\shared\janus.csproj" />
   </ItemGroup>
 
 </Project>

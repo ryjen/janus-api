@@ -1,7 +1,7 @@
 
 using Amazon.Lambda.APIGatewayEvents;
-using Amazon.CognitoIdentityProvider;
-using Newtonsoft.Json;
+
+[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace Janus;
 
@@ -9,19 +9,23 @@ using static Shared;
 
 public partial class Account
 {
+    private readonly Database _db = new Database();
+
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        switch(request.HttpMethod)
+        switch (request.HttpMethod)
         {
         case "GET":
-            return await ReadAccount(request.AuthToken());
+            return await Read(request.AuthToken());
         case "POST":
-            break;
         case "PUT":
-            break;
+            return await Update(request.ToParams());
         case "DELETE":
-            break;
-        }
-    }
+            return await Delete(request.AuthToken());
 
+        }
+
+        return Response(500, new { Message = "Invalid request" });
+
+    }
 }
