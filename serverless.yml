@@ -36,6 +36,7 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DescribeTable
+            - dynamodb:DeleteItem
           Resource:
             - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Account"
@@ -90,13 +91,29 @@ functions:
           method: delete
           cors: true
           private: true
+    package:
+      artifact: bin/Release/net6.0/account.zip
+
+  player:
+    handler: GameplayDataSystem::Janus.Player::Handler
+    events:
       - http:
-          path: /account
-          method: put
+          path: /player
+          method: post
+          cors: true
+          private: true
+      - http:
+          path: /player
+          method: get
+          cors: true
+          private: true
+      - http:
+          path: /player
+          method: delete
           cors: true
           private: true
     package:
-      artifact: bin/Release/net6.0/account.zip
+      artifact: bin/Release/net6.0/player.zip
 
 resources:
   Resources:
@@ -104,6 +121,20 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: Account
+        AttributeDefinitions:
+          - AttributeName: Id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: Id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    PlayerTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Player
         AttributeDefinitions:
           - AttributeName: Id
             AttributeType: S
