@@ -18,7 +18,7 @@ public partial class Account
         }
         catch (Exception ex)
         {
-            return Response(401, new { Message = "Authentication failed", Error = ex.Message });
+            return Response(401, new { Message = "Account delete failed", Error = ex.Message });
         }
     }
 }

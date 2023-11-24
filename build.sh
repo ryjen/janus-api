@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FUNCTIONS="auth account"
+FUNCTIONS="auth account player"
 
 #install zip on debian OS, since microsoft/dotnet container doesn't have zip by default
 if [ -f /etc/debian_version ]; then
