@@ -19,8 +19,8 @@ public partial class Auth
 
             var authRequest = new AdminInitiateAuthRequest
             {
-                UserPoolId = userPoolId,
-                ClientId = clientId,
+                UserPoolId = _userPoolId,
+                ClientId = _clientId,
                 AuthFlow = AuthFlowType.ADMIN_NO_SRP_AUTH,
                 AuthParameters = new Dictionary<string, string>
                 {

@@ -21,8 +21,8 @@ public partial class Auth
             var newPasswordRequest = new AdminRespondToAuthChallengeRequest
             {
                 ChallengeName = ChallengeNameType.NEW_PASSWORD_REQUIRED,
-                ClientId = clientId,
-                UserPoolId = userPoolId,
+                ClientId = _clientId,
+                UserPoolId = _userPoolId,
                 ChallengeResponses = new Dictionary<string, string> {
                     {"USERNAME", email},
                     {"NEW_PASSWORD", password}
