@@ -49,6 +49,12 @@ provider:
           Resource:
             - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::GetAtt: ["AccountPool", "Arn"]
+        - Effect: Allow
+          Action:
+            - sqs:createqueue
+          Resource:
+            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
+            - Fn::GetAtt: ["JanusQueue", "Arn"]
 
 functions:
   auth:
