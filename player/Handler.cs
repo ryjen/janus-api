@@ -9,7 +9,7 @@ using static Shared;
 
 public partial class Player
 {
-    private readonly Database _db = new Database();
+    private readonly ContextDB _db = new ContextDB();
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {

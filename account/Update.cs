@@ -3,7 +3,7 @@ using Amazon.Lambda.APIGatewayEvents;
 
 namespace Janus;
 
-using RequestParams = Dictionary<string, string>;
+using RequestParams = Dictionary<string, object>;
 using static Shared;
 using AccountModel = Janus.Model.Account;
 
@@ -15,8 +15,8 @@ public partial class Account
         {
             var account = new AccountModel
             {
-                Id = request["id"],
-                Email = request["email"]
+                Id = request["id"].ToString(),
+                Email = request["email"].ToString()
             };
             await _db.Save(account);
             return Response(200, new { Message = "Account updated" });
