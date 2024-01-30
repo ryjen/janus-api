@@ -11,8 +11,8 @@ public partial class Generic
     {
         try
         {
-            await _db.Create(request);
-            return Response(200, new { Message = "Object created" });
+            var id = await _db.Create(request);
+            return Response(200, new { Id = id, Message = "Object created" });
         }
         catch (Exception ex)
         {

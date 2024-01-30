@@ -71,7 +71,6 @@ public class UpdateRequest : CreateRequest, KeyRequest
 
 public class DeleteRequest : ReadRequest
 {
-    public object Data = null;
 }
 
 public static partial class Convert
