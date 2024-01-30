@@ -100,7 +100,7 @@ public abstract class DataHandler
         try
         {
             var entity = await _db.Read(request);
-            return Response(200, entity);
+            return Response(200, entity.ToJson());
         }
         catch
         {
