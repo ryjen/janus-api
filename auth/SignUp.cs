@@ -1,6 +1,7 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider.Model;
+using static System.Net.HttpStatusCode;
 
 namespace Janus;
 
@@ -50,12 +51,12 @@ public partial class Auth
             // TODO: use SQS events
             await _db.Update(account);
 
-            return Response(200, account);
+            return Response(OK, account);
         }
         catch
         {
             // TODO: handle rollback
-            return Response(401, new { Message = "Authentication failed" });
+            return Response(Unauthorized, new { Message = "Authentication failed" });
         }
     }
 }

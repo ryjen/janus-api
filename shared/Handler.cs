@@ -1,5 +1,6 @@
 
 using Amazon.Lambda.APIGatewayEvents;
+using static System.Net.HttpStatusCode;
 
 namespace Janus;
 
@@ -28,11 +29,11 @@ public abstract class ModelHandler : DataHandler
                 return await Delete(DeleteRequest(request));
             }
 
-            return Response(400, new { Message = "Invalid request" });
+            return Response(BadRequest, new { Message = "Invalid request" });
         }
         catch
         {
-            return Response(500, new { Message = "Internal error" });
+            return Response(InternalServerError, new { Message = "Internal error" });
         }
     }
 
@@ -88,11 +89,11 @@ public abstract class DataHandler
         try
         {
             var id = await _db.Create(request);
-            return Response(200, new { Id = id, Message = request.Entity + " created" });
+            return Response(OK, new { Id = id, Message = request.Entity + " created" });
         }
         catch
         {
-            return Response(401, new { Message = request.Entity + " create failed" });
+            return Response(BadRequest, new { Message = request.Entity + " create failed" });
         }
     }
     public async Task<APIGatewayProxyResponse> Read(ReadRequest request)
@@ -100,11 +101,11 @@ public abstract class DataHandler
         try
         {
             var entity = await _db.Read(request);
-            return Response(200, entity.ToJson());
+            return Response(OK, entity.ToJson());
         }
         catch
         {
-            return Response(401, new { Message = request.Entity + " read failed" });
+            return Response(BadRequest, new { Message = request.Entity + " read failed" });
         }
     }
 
@@ -113,11 +114,11 @@ public abstract class DataHandler
         try
         {
             await _db.Update(request);
-            return Response(200, new { Message = string.Format("{0} updated", request.Entity) });
+            return Response(OK, new { Message = string.Format("{0} updated", request.Entity) });
         }
         catch
         {
-            return Response(401, new { Message = string.Format("{0} update failed") });
+            return Response(BadRequest, new { Message = string.Format("{0} update failed") });
         }
     }
     public async Task<APIGatewayProxyResponse> Delete(DeleteRequest request)
@@ -125,11 +126,11 @@ public abstract class DataHandler
         try
         {
             await _db.Delete(request);
-            return Response(200, new { Message = string.Format("{0} deleted", request.Entity) });
+            return Response(OK, new { Message = string.Format("{0} deleted", request.Entity) });
         }
         catch
         {
-            return Response(401, new { Message = string.Format("{0} delete failed", request.Entity) });
+            return Response(BadRequest, new { Message = string.Format("{0} delete failed", request.Entity) });
         }
     }
 

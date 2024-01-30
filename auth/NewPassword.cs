@@ -1,6 +1,7 @@
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using static System.Net.HttpStatusCode;
 
 namespace Janus;
 
@@ -33,11 +34,11 @@ public partial class Auth
 
             string token = authResponse.AuthenticationResult.AccessToken;
 
-            return Response(200, new { Token = token });
+            return Response(OK, new { Token = token });
         }
         catch
         {
-            return Response(401, new { Message = "Authentication failed" });
+            return Response(Unauthorized, new { Message = "Authentication failed" });
         }
     }
 }
