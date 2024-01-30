@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FUNCTIONS="auth account player generic"
+FUNCTIONS="auth account player data"
 
 DOTNET_VERSION="net6.0"
 

@@ -7,7 +7,7 @@ namespace Janus;
 
 using static Shared;
 
-public partial class Generic : DataHandler
+public partial class Data : DataHandler
 {
     public override async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {

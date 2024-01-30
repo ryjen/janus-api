@@ -85,6 +85,11 @@ functions:
           private: true
       - http:
           path: /account
+          method: put
+          cors: true
+          private: true
+      - http:
+          path: /account
           method: get
           cors: true
           private: true
@@ -106,6 +111,11 @@ functions:
           private: true
       - http:
           path: /player
+          method: put
+          cors: true
+          private: true
+      - http:
+          path: /player
           method: get
           cors: true
           private: true
@@ -117,31 +127,31 @@ functions:
     package:
       artifact: bin/Release/net6.0/player.zip
 
-  generic:
-    handler: GameplayDataSystem::Janus.Generic::Handler
+  data:
+    handler: GameplayDataSystem::Janus.Data::Handler
     events:
       - http:
-          path: /generic
+          path: /data
           method: post
           cors: true
           private: true
       - http:
-          path: /generic
+          path: /data
           method: put
           cors: true
           private: true
       - http:
-          path: /generic
+          path: /data
           method: get
           cors: true
           private: true
       - http:
-          path: /generic
+          path: /data
           method: delete
           cors: true
           private: true
     package:
-      artifact: bin/Release/net6.0/generic.zip
+      artifact: bin/Release/net6.0/data.zip
 
 resources:
   Resources:
