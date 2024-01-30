@@ -50,7 +50,7 @@ public abstract class ModelHandler : DataHandler
 
     private UpdateRequest UpdateRequest(APIGatewayProxyRequest request)
     {
-        var param = request.ToParams();
+        var param = request.Body.ToParams();
         var id = param["id"];
         param.Remove("id");
         return new UpdateRequest
@@ -63,7 +63,7 @@ public abstract class ModelHandler : DataHandler
 
     private DeleteRequest DeleteRequest(APIGatewayProxyRequest request)
     {
-        var param = request.ToParams();
+        var param = request.Body.ToParams();
         var id = param["id"];
         return new DeleteRequest
         {

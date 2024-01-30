@@ -1,9 +1,10 @@
 
+using Newtonsoft.Json;
+
 namespace Janus;
 
 public interface EntityRequest
 {
-
     public string Entity
     {
         get;
@@ -13,6 +14,7 @@ public interface EntityRequest
 
 public abstract class Request : EntityRequest
 {
+    [JsonProperty("entity")]
     public string Entity
     {
         get;
@@ -52,6 +54,7 @@ public class ListRequest : Request { };
 
 public class CreateRequest : Request, DataRequest
 {
+    [JsonProperty("data")]
     public object Data
     {
         get;
@@ -61,6 +64,7 @@ public class CreateRequest : Request, DataRequest
 
 public class UpdateRequest : CreateRequest, KeyRequest
 {
+    [JsonProperty("id")]
     public string Id
     {
         get;

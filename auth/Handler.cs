@@ -24,11 +24,11 @@ public partial class Auth
             switch (request.Path)
             {
             case "/authenticate":
-                return await Authenticate(request.ToParams());
+                return await Authenticate(request.Body.ToParams());
             case "/reset":
-                return await NewPassword(request.ToParams());
+                return await NewPassword(request.Body.ToParams());
             case "/signup":
-                return await SignUp(request.ToParams());
+                return await SignUp(request.Body.ToParams());
             default:
                 return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
             }
