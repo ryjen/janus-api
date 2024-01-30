@@ -1,5 +1,6 @@
 
 using Amazon.Lambda.APIGatewayEvents;
+using static System.Net.HttpStatusCode;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
@@ -25,11 +26,12 @@ public partial class Data : DataHandler
                 return await Delete(request.ParseJson<DeleteRequest>());
             }
 
-            return Response(400, new { Message = "Invalid request" });
+            return Response(BadRequest, new { Message = "Invalid request" });
         }
         catch
         {
-            return Response(500, new { Message = "Internal error" });
+            return Response(InternalServerError, new { Message = "Internal error" });
+
         }
     }
 }

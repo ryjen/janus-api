@@ -1,6 +1,7 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
+using static System.Net.HttpStatusCode;
 
 namespace Janus;
 
@@ -17,11 +18,11 @@ partial class Auth
 
         if (errors.ContainsKey(type))
         {
-            return Response(300, new { Message = "Authentication incomplete", Error = errors[type], Session = session });
+            return Response(Unauthorized, new { Message = "Authentication incomplete", Error = errors[type], Session = session });
         }
         else
         {
-            return Response(400, new { Message = "Authorization incomplete", Error = type.ToString(), Session = session });
+            return Response(Unauthorized, new { Message = "Authorization incomplete", Error = type.ToString(), Session = session });
         }
     }
 }

@@ -1,6 +1,7 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
+using static System.Net.HttpStatusCode;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
@@ -29,12 +30,12 @@ public partial class Auth
             case "/signup":
                 return await SignUp(request.ToParams());
             default:
-                return Response(401, new { Message = "Authentication failed", Error = "unknown path" });
+                return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
             }
         }
         catch
         {
-            return Response(500, new { Message = "Internal error" });
+            return Response(InternalServerError, new { Message = "Internal error" });
         }
     }
 }
