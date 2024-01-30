@@ -39,8 +39,7 @@ public abstract class ModelHandler : DataHandler
 
     private ReadRequest ReadRequest(APIGatewayProxyRequest request)
     {
-        var param = request.ToParams();
-        var id = param["id"].ToString();
+        var id = request.QueryStringParameters["id"];
 
         return new ReadRequest
         {
@@ -48,10 +47,12 @@ public abstract class ModelHandler : DataHandler
             Id = id
         };
     }
+
     private UpdateRequest UpdateRequest(APIGatewayProxyRequest request)
     {
         var param = request.ToParams();
-        var id = param.Remove("id");
+        var id = param["id"];
+        param.Remove("id");
         return new UpdateRequest
         {
             Entity = _entity,
@@ -63,11 +64,11 @@ public abstract class ModelHandler : DataHandler
     private DeleteRequest DeleteRequest(APIGatewayProxyRequest request)
     {
         var param = request.ToParams();
-        var id = param["id"].ToString();
+        var id = param["id"];
         return new DeleteRequest
         {
             Entity = _entity,
-            Id = id
+            Id = id.ToString()
         };
     }
 
