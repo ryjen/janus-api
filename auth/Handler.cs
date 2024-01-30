@@ -18,9 +18,10 @@ public partial class Auth
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-
-        switch (request.Path)
+        try
         {
+            switch (request.Path)
+            {
             case "/authenticate":
                 return await Authenticate(request.ToParams());
             case "/reset":
@@ -29,6 +30,11 @@ public partial class Auth
                 return await SignUp(request.ToParams());
             default:
                 return Response(401, new { Message = "Authentication failed", Error = "unknown path" });
+            }
+        }
+        catch
+        {
+            return Response(500, new { Message = "Internal error" });
         }
     }
 }

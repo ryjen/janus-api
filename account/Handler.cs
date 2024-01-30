@@ -1,30 +1,9 @@
 
-using Amazon.Lambda.APIGatewayEvents;
-
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace Janus;
 
-using static Shared;
-
-public partial class Account
+public partial class Account : ModelHandler
 {
-    private readonly ContextDB _db = new ContextDB();
-
-    public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
-    {
-        switch (request.HttpMethod)
-        {
-        case "GET":
-            return await Read(request.AuthToken());
-        case "POST":
-        case "PUT":
-            return await Update(request.ToParams());
-        case "DELETE":
-            return await Delete(request.AuthToken());
-        }
-
-        return Response(500, new { Message = "Invalid request" });
-
-    }
+    public Account() : base("Account") { }
 }

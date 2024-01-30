@@ -1,8 +1,6 @@
 
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Janus;
 

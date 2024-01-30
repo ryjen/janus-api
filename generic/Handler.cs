@@ -7,25 +7,29 @@ namespace Janus;
 
 using static Shared;
 
-public partial class Generic
+public partial class Generic : DataHandler
 {
-    private readonly Database _db = new Database();
-
-    public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
+    public override async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        switch (request.HttpMethod)
+        try
         {
-        case "GET":
-            return await Read(request.ParseForm<ReadRequest>());
-        case "POST":
-            return await Create(request.ParseJson<CreateRequest>());
-        case "PUT":
-            return await Update(request.ParseJson<UpdateRequest>());
-        case "DELETE":
-            return await Delete(request.ParseJson<DeleteRequest>());
+            switch (request.HttpMethod)
+            {
+            case "GET":
+                return await Read(request.ParseForm<ReadRequest>());
+            case "POST":
+                return await Create(request.ParseJson<CreateRequest>());
+            case "PUT":
+                return await Update(request.ParseJson<UpdateRequest>());
+            case "DELETE":
+                return await Delete(request.ParseJson<DeleteRequest>());
+            }
+
+            return Response(400, new { Message = "Invalid request" });
         }
-
-        return Response(500, new { Message = "Invalid request" });
-
+        catch
+        {
+            return Response(500, new { Message = "Internal error" });
+        }
     }
 }

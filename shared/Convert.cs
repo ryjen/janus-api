@@ -26,12 +26,24 @@ public static partial class Convert
         return JsonConvert.DeserializeObject<T>(body, serializerSettings);
     }
 
+public static T ParseJson<T>(this APIGatewayProxyRequest request) where T :
+    Request
+    {
+        return request.Body.JsonDeserialize<T>();
+    }
+
+public static T ParseForm<T>(this APIGatewayProxyRequest request) where T :
+    Request
+    {
+        var json = request.QueryStringParameters.JsonSerialize();
+        return json.JsonDeserialize<T>();
+    }
     public static Params ToParams(this APIGatewayProxyRequest request)
     {
         return JsonDeserialize<Params>(request.Body);
     }
 
-    public static string AuthToken(this APIGatewayProxyRequest request)
+    public static string AuthorizedId(this APIGatewayProxyRequest request)
     {
         var auth = request.Headers["Authorization"].Replace("Bearer ", "");
         var handler = new JwtSecurityTokenHandler();
