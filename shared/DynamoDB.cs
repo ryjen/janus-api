@@ -7,7 +7,6 @@ namespace Janus;
 
 public class Database
 {
-
     public Database()
     {
         this._client = new AmazonDynamoDBClient();
@@ -21,7 +20,7 @@ public class Database
         var doc = new Document();
         doc.Add("Data", data);
         var table = Table.LoadTable(_client, request.Entity);
-        await table.UpdateItemAsync(doc, request.Key);
+        await table.UpdateItemAsync(doc, request.Id);
     }
 
     public async Task<string> Create(CreateRequest request)
@@ -39,13 +38,13 @@ public class Database
     public async Task<Document> Read(ReadRequest request)
     {
         var table = Table.LoadTable(_client, request.Entity);
-        return await table.GetItemAsync(request.Key);
+        return await table.GetItemAsync(request.Id);
     }
 
     public async Task Delete(DeleteRequest request)
     {
         var table = Table.LoadTable(_client, request.Entity);
-        await table.DeleteItemAsync(request.Key);
+        await table.DeleteItemAsync(request.Id);
     }
 }
 

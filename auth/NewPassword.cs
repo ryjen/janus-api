@@ -35,9 +35,9 @@ public partial class Auth
 
             return Response(200, new { Token = token });
         }
-        catch (Exception ex)
+        catch
         {
-            return Response(401, new { Message = "Authentication failed", Error = ex.Message });
+            return Response(401, new { Message = "Authentication failed" });
         }
     }
 }

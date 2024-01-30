@@ -5,12 +5,11 @@ using Amazon.CognitoIdentityProvider.Model;
 namespace Janus;
 
 using static Shared;
-using Account = Model.Account;
 using RequestParams = Dictionary<string, object>;
 
 public partial class Auth
 {
-    private readonly ContextDB _db = new ContextDB();
+    private readonly Database _db = new Database();
 
     public async Task<APIGatewayProxyResponse> SignUp(RequestParams request)
     {
@@ -38,17 +37,25 @@ public partial class Auth
 
             var sub = authResponse.User.Attributes.Find(x => x.Name == "sub").Value;
 
-            // TODO: use SQS events
-            var account = new Account { Id = sub, Email = email };
+            var account = new UpdateRequest
+            {
+                Id = sub,
+                Entity = "Account",
+                Data = new
+                {
+                    Email = email
+                }
+            };
 
-            await _db.Save(account);
+            // TODO: use SQS events
+            await _db.Update(account);
 
             return Response(200, account);
         }
-        catch (Exception ex)
+        catch
         {
             // TODO: handle rollback
-            return Response(401, new { Message = "Authentication failed", Error = ex.Message });
+            return Response(401, new { Message = "Authentication failed" });
         }
     }
 }

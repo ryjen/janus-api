@@ -30,8 +30,6 @@ public partial class Auth
             };
             var authResponse = await _cognitoClient.AdminInitiateAuthAsync(authRequest);
 
-            log(authResponse);
-
             if (authResponse.ChallengeName != null)
             {
                 return Challenged(authResponse.ChallengeName, authResponse.Session);
@@ -41,9 +39,9 @@ public partial class Auth
 
             return Response(200, new { Token = token });
         }
-        catch (Exception ex)
+        catch
         {
-            return Response(401, new { Message = "Authentication failed", Error = ex.Message });
+            return Response(401, new { Message = "Authentication failed" });
         }
     }
 }

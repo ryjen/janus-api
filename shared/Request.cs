@@ -1,6 +1,4 @@
 
-using Amazon.Lambda.APIGatewayEvents;
-
 namespace Janus;
 
 public interface EntityRequest
@@ -20,11 +18,12 @@ public abstract class Request : EntityRequest
         get;
         set;
     }
+
 };
 
 public interface KeyRequest
 {
-    public string Key
+    public string Id
     {
         get;
         set;
@@ -42,7 +41,7 @@ public interface DataRequest
 
 public class ReadRequest : Request, KeyRequest
 {
-    public string Key
+    public string Id
     {
         get;
         set;
@@ -62,7 +61,7 @@ public class CreateRequest : Request, DataRequest
 
 public class UpdateRequest : CreateRequest, KeyRequest
 {
-    public string Key
+    public string Id
     {
         get;
         set;
@@ -72,20 +71,3 @@ public class UpdateRequest : CreateRequest, KeyRequest
 public class DeleteRequest : ReadRequest
 {
 }
-
-public static partial class Convert
-{
-
-public static T ParseJson<T>(this APIGatewayProxyRequest request) where T :
-    Request
-    {
-        return request.Body.JsonDeserialize<T>();
-    }
-
-public static T ParseForm<T>(this APIGatewayProxyRequest request) where T :
-    Request
-    {
-        var json = request.QueryStringParameters.JsonSerialize();
-        return json.JsonDeserialize<T>();
-    }
-};
