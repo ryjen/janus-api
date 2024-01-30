@@ -18,7 +18,7 @@ public class Database
     {
         var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
-        doc.Add("Data", data);
+        doc.Add("data", data);
         var table = Table.LoadTable(_client, request.Entity);
         await table.UpdateItemAsync(doc, request.Id);
     }
@@ -28,8 +28,8 @@ public class Database
         var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
         var id = Guid.NewGuid().ToString();
-        doc.Add("Id", id);
-        doc.Add("Data", data);
+        doc.Add("id", id);
+        doc.Add("data", data);
         var table = Table.LoadTable(_client, request.Entity);
         await table.PutItemAsync(doc);
         return id;

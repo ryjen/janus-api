@@ -38,9 +38,9 @@ public static T ParseForm<T>(this APIGatewayProxyRequest request) where T :
         var json = request.QueryStringParameters.JsonSerialize();
         return json.JsonDeserialize<T>();
     }
-    public static Params ToParams(this APIGatewayProxyRequest request)
+    public static Params ToParams(this string body)
     {
-        return JsonDeserialize<Params>(request.Body);
+        return JsonDeserialize<Params>(body);
     }
 
     public static string AuthorizedId(this APIGatewayProxyRequest request)
