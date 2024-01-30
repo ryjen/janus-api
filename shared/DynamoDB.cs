@@ -24,15 +24,16 @@ public class Database
         await table.UpdateItemAsync(doc, request.Key);
     }
 
-    public async Task Create(CreateRequest request)
+    public async Task<string> Create(CreateRequest request)
     {
         var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
-
-        doc.Add("Id", Guid.NewGuid());
+        var id = Guid.NewGuid().ToString();
+        doc.Add("Id", id);
         doc.Add("Data", data);
         var table = Table.LoadTable(_client, request.Entity);
         await table.PutItemAsync(doc);
+        return id;
     }
 
     public async Task<Document> Read(ReadRequest request)
@@ -44,19 +45,7 @@ public class Database
     public async Task Delete(DeleteRequest request)
     {
         var table = Table.LoadTable(_client, request.Entity);
-
-        if (request.Data == null)
-        {
-            await table.DeleteItemAsync(request.Key);
-            return;
-        }
-
-        var data = Document.FromJson(request.Data.JsonSerialize());
-        var doc = new Document();
-
-        doc.Add("Id", request.Key);
-        doc.Add("Data", data);
-        await table.DeleteItemAsync(doc);
+        await table.DeleteItemAsync(request.Key);
     }
 }
 
