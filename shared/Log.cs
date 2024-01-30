@@ -1,12 +1,10 @@
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System;
+namespace Janus;
 
 public partial class Shared
 {
-    public static void log(Object obj)
+    public static void log(object obj)
     {
-        Console.WriteLine("{0}", JsonConvert.SerializeObject(obj));
+        Console.WriteLine("{0}", obj.JsonSerialize());
     }
 }

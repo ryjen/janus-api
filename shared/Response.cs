@@ -1,20 +1,16 @@
 
 using Amazon.Lambda.APIGatewayEvents;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+
+namespace Janus;
 
 public partial class Shared
 {
-    public static APIGatewayProxyResponse Response(int status, Object body)
+    public static APIGatewayProxyResponse Response(int status, object body)
     {
-        var serializerSettings = new JsonSerializerSettings();
-        serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-        var responseBody = JsonConvert.SerializeObject(body, serializerSettings);
-
         return new APIGatewayProxyResponse
         {
             StatusCode = status,
-            Body = responseBody,
+            Body = body.JsonSerialize(),
             Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
         };
     }

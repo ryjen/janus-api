@@ -7,22 +7,22 @@ namespace Janus;
 
 using static Shared;
 
-public partial class Player
+public partial class Generic
 {
-    private readonly ContextDB _db = new ContextDB();
+    private readonly Database _db = new Database();
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
         switch (request.HttpMethod)
         {
         case "GET":
-            return await Read(request.AuthToken());
+            return await Read(request.ParseForm<ReadRequest>());
         case "POST":
+            return await Create(request.ParseJson<CreateRequest>());
         case "PUT":
-            return await Update(request.ToParams());
+            return await Update(request.ParseJson<UpdateRequest>());
         case "DELETE":
-            return await Delete(request.AuthToken());
-
+            return await Delete(request.ParseJson<DeleteRequest>());
         }
 
         return Response(500, new { Message = "Invalid request" });

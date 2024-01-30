@@ -7,7 +7,7 @@ configValidationMode: error
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
-frameworkVersion: "3"
+#frameworkVersion: "3"
 
 useDotenv: true
 
@@ -117,6 +117,32 @@ functions:
     package:
       artifact: bin/Release/net6.0/player.zip
 
+  generic:
+    handler: GameplayDataSystem::Janus.Generic::Handler
+    events:
+      - http:
+          path: /generic
+          method: post
+          cors: true
+          private: true
+      - http:
+          path: /generic
+          method: put
+          cors: true
+          private: true
+      - http:
+          path: /generic
+          method: get
+          cors: true
+          private: true
+      - http:
+          path: /generic
+          method: delete
+          cors: true
+          private: true
+    package:
+      artifact: bin/Release/net6.0/generic.zip
+
 resources:
   Resources:
     AccountTable:
@@ -199,3 +225,23 @@ resources:
       Properties:
         Name: janus-api-gateway
         FailOnWarnings: true
+
+custom:
+  local:
+    stage: local
+    dynamodb:
+      stages:
+        - local
+    lambda:
+      stages:
+        - local
+  serverless-offline:
+    httpPort: 3000
+    stage: local
+    apiKey: ${env:API_KEY}
+
+plugins:
+  - serverless-offline
+  - serverless-local
+  - serverless-version-tracker
+  - serverless-offline-local-authorizers-plugin

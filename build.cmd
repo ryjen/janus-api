@@ -4,3 +4,5 @@ dotnet restore
 dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/auth.zip --project-location auth
 
 dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/account.zip --project-location account
+
+dotnet lambda package --configuration Release --framework net6.0 --output-package bin/Release/net6.0/generic.zip --project-location generic

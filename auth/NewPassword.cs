@@ -5,7 +5,7 @@ using Amazon.CognitoIdentityProvider.Model;
 namespace Janus;
 
 using static Shared;
-using RequestParams = Dictionary<string, string>;
+using RequestParams = Dictionary<string, object>;
 
 public partial class Auth
 {
@@ -14,9 +14,9 @@ public partial class Auth
     {
         try
         {
-            string email = request["email"];
-            string password = request["password"];
-            string session = request["session"];
+            string email = request["email"].ToString();
+            string password = request["password"].ToString();
+            string session = request["session"].ToString();
 
             var newPasswordRequest = new AdminRespondToAuthChallengeRequest
             {

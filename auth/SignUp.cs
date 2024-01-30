@@ -6,18 +6,18 @@ namespace Janus;
 
 using static Shared;
 using Account = Model.Account;
-using RequestParams = Dictionary<string, string>;
+using RequestParams = Dictionary<string, object>;
 
 public partial class Auth
 {
-    private readonly Database _db = new Database();
+    private readonly ContextDB _db = new ContextDB();
 
     public async Task<APIGatewayProxyResponse> SignUp(RequestParams request)
     {
         try
         {
-            string email = request["email"];
-            string password = request["password"];
+            string email = request["email"].ToString();
+            string password = request["password"].ToString();
 
             var attributes = new List<AttributeType>();
             var deliveryMediums = new List<string>();
