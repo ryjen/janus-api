@@ -17,7 +17,7 @@ public class Database
 
     public async Task Update(UpdateRequest request)
     {
-        var data = Document.FromJson(request.Data);
+        var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
         doc.Add("Data", data);
         var table = Table.LoadTable(_client, request.Entity);
@@ -26,7 +26,7 @@ public class Database
 
     public async Task Create(CreateRequest request)
     {
-        var data = Document.FromJson(request.Data);
+        var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
 
         doc.Add("Id", Guid.NewGuid());
@@ -51,7 +51,7 @@ public class Database
             return;
         }
 
-        var data = Document.FromJson(request.Data);
+        var data = Document.FromJson(request.Data.JsonSerialize());
         var doc = new Document();
 
         doc.Add("Id", request.Key);

@@ -33,7 +33,7 @@ public interface KeyRequest
 
 public interface DataRequest
 {
-    public string Data
+    public object Data
     {
         get;
         set;
@@ -53,7 +53,7 @@ public class ListRequest : Request { };
 
 public class CreateRequest : Request, DataRequest
 {
-    public string Data
+    public object Data
     {
         get;
         set;
@@ -71,7 +71,7 @@ public class UpdateRequest : CreateRequest, KeyRequest
 
 public class DeleteRequest : ReadRequest
 {
-    public string Data = null;
+    public object Data = null;
 }
 
 public static partial class Convert
