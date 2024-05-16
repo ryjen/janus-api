@@ -28,7 +28,7 @@ Install `dotnet core` for your system.
 
 ## Dev
 
-### 1. `./build.sh`
+### 1. `./build.sh` (or ./build.cmd on windows)
 
 Build the function package
 

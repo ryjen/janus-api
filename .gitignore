@@ -245,5 +245,3 @@ _Pvt_Extensions
 
 # Serverless directories
 .serverless*
-package*.json
-yarn*.lock
