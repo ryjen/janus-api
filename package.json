@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-local": "^0.1.12",
+    "serverless-offline": "^13.5.0",
+    "serverless-offline-local-authorizers-plugin": "^1.2.0",
+    "serverless-version-tracker": "^1.1.0"
+  }
+}
