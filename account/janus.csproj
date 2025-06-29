@@ -13,4 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\shared\janus.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
+  </ItemGroup>
 </Project>
