@@ -14,8 +14,8 @@ public partial class Auth
 
     private readonly AmazonCognitoIdentityProviderClient _cognitoClient = new AmazonCognitoIdentityProviderClient();
 
-    private readonly string userPoolId = Environment.GetEnvironmentVariable("USER_POOL_ID");
-    private readonly string clientId = Environment.GetEnvironmentVariable("CLIENT_ID");
+    private readonly string _userPoolId = Environment.GetEnvironmentVariable("USER_POOL_ID");
+    private readonly string _clientId = Environment.GetEnvironmentVariable("CLIENT_ID");
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {

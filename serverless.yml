@@ -49,6 +49,13 @@ provider:
           Resource:
             - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::GetAtt: ["AccountPool", "Arn"]
+        - Effect: Allow
+          Action:
+            - sqs:createqueue
+            - sqs:sendmessage
+          Resource:
+            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
+            - Fn::GetAtt: ["JanusQueue", "Arn"]
 
 functions:
   auth:
@@ -72,6 +79,8 @@ functions:
     environment:
       USER_POOL_ID: !Ref AccountPool
       CLIENT_ID: !Ref AccountPoolClient
+      QUEUE_URL: !Ref JanusQueue
+
     package:
       artifact: bin/Release/net6.0/auth.zip
 
@@ -98,6 +107,11 @@ functions:
           method: delete
           cors: true
           private: true
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - JanusQueue
+              - Arn
     package:
       artifact: bin/Release/net6.0/account.zip
 
@@ -182,6 +196,11 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+
+    JanusQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: janus-queue
 
     AccountPool:
       Type: AWS::Cognito::UserPool

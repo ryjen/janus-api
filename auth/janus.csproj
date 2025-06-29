@@ -13,4 +13,9 @@
   <ItemGroup>
     <ProjectReference Include="..\shared\janus.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.300.7" />
+  </ItemGroup>
+
 </Project>
