@@ -20,7 +20,7 @@ public partial class Auth
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 return Response(BadRequest, new { Message = "Email and password required" });
 
-            var result = await _cognitoClient.SignUpAsync(new SignUpRequest
+            await _cognitoClient.SignUpAsync(new SignUpRequest
             {
                 ClientId = _clientId,
                 Username = email,
