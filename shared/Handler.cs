@@ -87,6 +87,7 @@ public abstract class DataHandler
         try
         {
             var entity = await _db.Read(request);
+            if (entity == null) return Response(NotFound, new { Message = "Record not found" });
             return Response(OK, entity.ToJson());
         }
         catch
