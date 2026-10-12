@@ -33,11 +33,11 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 
 **Per-function IAM** limits the blast radius of record functions versus a shared provider-wide role. This does not replace Lambda invocation and API Gateway access policies.
 
-**SAM** removes the obsolete npm-based Serverless Framework packaging path; local `dotnet publish` produces artifacts and `sam validate --lint` checks the template. Deployment remains a separate explicit operation.
+**SAM** removes the obsolete npm-based Serverless Framework packaging path; local `dotnet restore/build/test` verifies the application; the source-based `sam build` then packages Lambda archives into `.aws-sam/build`, and `sam validate --lint` checks the template. Deployment remains a separate explicit operation.
 
 ## Outstanding verification
 
-- .NET 10 release build and twelve unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
+- .NET 10 release build and nineteen unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
 - API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.

@@ -115,7 +115,7 @@ Resources:
   AccountConfirmedFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/auth/
+      CodeUri: auth/
       Handler: GameplayDataSystem::Janus.AccountConfirmed::Handler
       Environment:
         Variables:
@@ -137,7 +137,7 @@ Resources:
   AuthFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/auth/
+      CodeUri: auth/
       Handler: GameplayDataSystem::Janus.Auth::Handler
       Environment:
         Variables:
@@ -191,7 +191,7 @@ Resources:
   AccountFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/account/
+      CodeUri: account/
       Handler: GameplayDataSystem::Janus.Account::Handler
       Environment:
         Variables:
@@ -214,7 +214,7 @@ Resources:
   AccountRecoveryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/account/
+      CodeUri: account/
       Handler: GameplayDataSystem::Janus.AccountRecovery::Handler
       Environment:
         Variables:
@@ -241,7 +241,7 @@ Resources:
   PlayerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/player/
+      CodeUri: player/
       Handler: GameplayDataSystem::Janus.Player::Handler
       Environment:
         Variables:
@@ -285,7 +285,7 @@ Resources:
   AccountProvisionFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: dist/account/
+      CodeUri: account/
       Handler: GameplayDataSystem::Janus.Account::Provision
       Environment:
         Variables:

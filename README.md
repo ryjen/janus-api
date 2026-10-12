@@ -40,16 +40,16 @@ The generic `/data` endpoint is **not registered**. Account HTTP mutation is dis
 
 ## Local build and infrastructure validation
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html). No npm or Serverless Framework account is required.
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), and a native `zip` utility on Linux. The SAM build uses the AWS Lambda .NET packaging tool, which SAM installs when needed. No npm or Serverless Framework account is required.
 
 ```bash
 ./build.sh
 sam validate --template-file template.yaml --region ca-central-1 --lint
 ```
 
-`build.sh` runs restore, build, tests, and produces three Lambda publish directories under `dist/`. The SAM template points at those artifacts; validation and deployment are separate operations.
+`build.sh` restores and tests the solution, then runs `sam build` on the three source projects (`auth/`, `account/`, and `player/`) to create deployable Lambda archives and a transformed template under `.aws-sam/build/`. This avoids stale `dist/` outputs. The script validates the source SAM template and **does not deploy**. Windows developers can use `build.cmd`.
 
-**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran twelve C# unit tests, and published all three Lambda artifact directories on a temporary Linux environment. Separately, `cfn-lint` and seven infrastructure contract tests passed. **AWS SAM CLI 1.168.0 validates the template locally (including `--lint` with a documented W3005 exception for generated usage-plan dependencies). SAM packaging/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
+**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran nineteen C# unit tests, and produced all three Lambda artifact sets on a temporary Linux environment. Separately, `cfn-lint` and nine infrastructure contract tests passed. **AWS SAM CLI 1.168.0 validates the template and packages all functions locally (including `--lint` with a documented W3005 exception for generated usage-plan dependencies); the restricted validation host used a local `zip` compatibility helper for packaging. AWS upload/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
 
 ## Sandbox deployment (manual, after verification)
 
