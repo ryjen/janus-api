@@ -1,3 +1,4 @@
+#nullable enable
 
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;

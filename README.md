@@ -45,7 +45,7 @@ sam validate --template template.yaml --lint
 
 `build.sh` runs restore, build, tests, and produces three Lambda publish directories under `dist/`. The SAM template points at those artifacts; validation and deployment are separate operations.
 
-**The above commands are not yet verified to pass on this branch.** Exact package/build and AWS behaviour remain acceptance criteria in [issue #7](https://github.com/ryjen/janus-api/issues/7). No CI or deployment success is claimed.
+**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran six C# unit tests, and published all three Lambda artifact directories on a temporary Linux environment. Separately, `cfn-lint` and six infrastructure contract tests passed. **AWS SAM CLI packaging/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
 
 ## Sandbox deployment (manual, after verification)
 
