@@ -21,7 +21,7 @@ public partial class Account
             if (string.IsNullOrWhiteSpace(account.Id) || string.IsNullOrWhiteSpace(account.Email))
                 throw new InvalidOperationException("Incomplete account creation message");
 
-            await db.Create(new CreateRequest { Entity = table, Data = account }, account.Id);
+            await db.CreateIfAbsent(new CreateRequest { Entity = table, Data = account }, account.Id);
         }
     }
 }

@@ -35,6 +35,29 @@ public class Database
         return id;
     }
 
+    // SQS can redeliver messages: never overwrite an already provisioned account.
+    public async Task CreateIfAbsent(CreateRequest request, string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Missing account ID", nameof(id));
+        var data = Document.FromJson(request.Data.JsonSerialize());
+        var doc = new Document();
+        doc.Add("id", id);
+        doc.Add("data", data);
+        var table = Table.LoadTable(_client, request.Entity);
+        var condition = new PutItemOperationConfig
+        {
+            ConditionalExpression = new Expression { ExpressionStatement = "attribute_not_exists(id)" }
+        };
+        try
+        {
+            await table.PutItemAsync(doc, condition);
+        }
+        catch (Amazon.DynamoDBv2.Model.ConditionalCheckFailedException)
+        {
+            // A successful earlier delivery is idempotent. Existing data is preserved.
+        }
+    }
+
     public async Task<Document> Read(ReadRequest request)
     {
         var table = Table.LoadTable(_client, request.Entity);

@@ -88,26 +88,6 @@ functions:
     events:
       - http:
           path: /account
-          method: post
-          cors: true
-          private: true
-          authorizer:
-            name: JanusCognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn:
-              Fn::GetAtt: [AccountPool, Arn]
-      - http:
-          path: /account
-          method: put
-          cors: true
-          private: true
-          authorizer:
-            name: JanusCognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn:
-              Fn::GetAtt: [AccountPool, Arn]
-      - http:
-          path: /account
           method: get
           cors: true
           private: true
@@ -217,12 +197,20 @@ resources:
     JanusQueue:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: janus-queue
+        QueueName: ${self:service}-${sls:stage}-queue
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt JanusDeadLetterQueue.Arn
+          maxReceiveCount: 5
+
+    JanusDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-dead-letter
 
     AccountPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: janus-pool
+        UserPoolName: ${self:service}-${sls:stage}-pool
         Policies:
           PasswordPolicy:
             MinimumLength: 8
@@ -246,7 +234,7 @@ resources:
     AccountPoolClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
-        ClientName: janus-pool-client
+        ClientName: ${self:service}-${sls:stage}-pool-client
         UserPoolId:
           Ref: AccountPool
         GenerateSecret: false

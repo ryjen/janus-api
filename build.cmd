@@ -5,6 +5,6 @@ dotnet lambda package --configuration Release --framework net10.0 --output-packa
 
 dotnet lambda package --configuration Release --framework net10.0 --output-package bin/Release/net10.0/account.zip --project-location account
 
-dotnet lambda package --configuration Release --framework net10.0 --output-package bin/Release/net10.0/account.zip --project-location player
+dotnet lambda package --configuration Release --framework net10.0 --output-package bin/Release/net10.0/player.zip --project-location player
 
 dotnet lambda package --configuration Release --framework net10.0 --output-package bin/Release/net10.0/data.zip --project-location data

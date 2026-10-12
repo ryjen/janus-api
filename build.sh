@@ -4,12 +4,8 @@ FUNCTIONS="auth account player data"
 
 DOTNET_VERSION="net10.0"
 
-#install zip on debian OS, since microsoft/dotnet container doesn't have zip by default
-if [ -f /etc/debian_version ]; then
-	echo "update system"
-	apt -qq update
-	apt -qq -y install zip
-fi
+# Package prerequisites: the .NET SDK, Amazon.Lambda.Tools, and zip must be available.
+command -v zip >/dev/null || { echo 'zip is required' >&2; exit 1; }
 
 echo "Check lambda tools installed"
 dotnet tool install -g Amazon.Lambda.Tools --framework $DOTNET_VERSION 2>/dev/null
