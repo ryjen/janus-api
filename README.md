@@ -37,6 +37,8 @@ A client may omit the `id` query/body field on account and player routes; when p
 
 ## Build and test
 
+**Build compatibility blocker:** the existing pinned Serverless Framework v3 toolchain predates support for .NET 10. This branch has not yet regenerated the npm lockfile for an upgrade or migrated infrastructure packaging to SAM. The commands below describe the intended validation, **not successful execution**. See [issue #7](https://github.com/ryjen/janus-api/issues/7). Do not deploy while this is unresolved.
+
 Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), `zip`, Node.js/npm, and the Amazon Lambda .NET CLI tooling. AWS credentials are required only for an explicitly authorized deployment.
 
 ```bash
