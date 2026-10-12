@@ -18,10 +18,12 @@ flowchart LR
     Queue --> Provision[Provision Lambda]
     Provision --> AccountDB[(DynamoDB Account)]
     Account --> AccountDB
+    Recovery[Account recovery Lambda] --> AccountDB
+    Recovery --> Queue
     Player --> PlayerDB[(DynamoDB Player)]
 ```
 
-Signup uses Cognito self-enrollment, followed by email-code confirmation at `POST /confirm`. **Only the trusted Cognito PostConfirmation trigger** enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
+Signup uses Cognito self-enrollment, followed by email-code confirmation at `POST /confirm`. **Only the trusted Cognito PostConfirmation trigger** enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. If confirmation succeeded but SQS provisioning was interrupted, an authenticated user with a verified email can call `POST /account/reconcile` to request idempotent recovery of their own missing account (202 queued, 200 already present, or 401/403/503). Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
 
 ## Auth and API surface
 
@@ -29,6 +31,7 @@ Signup uses Cognito self-enrollment, followed by email-code confirmation at `POS
 | --- | --- | --- |
 | `/signup`, `/confirm`, `/authenticate`, `/reset` | POST | Usage-plan API key; Cognito identity actions |
 | `/account` | GET | Usage-plan API key + Cognito ID token |
+| `/account/reconcile` | POST | Usage-plan API key + Cognito ID token with verified email |
 | `/player` | GET, POST, PUT, DELETE | Usage-plan API key + Cognito ID token |
 
 For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. API Gateway is configured with a Cognito default authorizer; the four auth flows explicitly opt out while retaining their API-key requirement.

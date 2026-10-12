@@ -65,12 +65,12 @@ class TemplateContractTests(unittest.TestCase):
         actual = {(method, path) for _,_,method,path,_ in self.routes}
         expected = {
             ("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset"),
-            ("GET", "/account"), ("GET", "/player"), ("POST", "/player"),
+            ("GET", "/account"), ("POST", "/account/reconcile"), ("GET", "/player"), ("POST", "/player"),
             ("PUT", "/player"), ("DELETE", "/player")
         }
         self.assertEqual(actual, expected)
         for func, _, method, path, auth in self.routes:
-            if path in {"/account", "/player"}:
+            if path in {"/account", "/account/reconcile", "/player"}:
                 self.assertNotEqual(auth.get("Authorizer"), "NONE")
                 self.assertEqual(auth.get("ApiKeyRequired", True), True)
 
@@ -81,6 +81,7 @@ class TemplateContractTests(unittest.TestCase):
     def test_record_roles_have_distinct_tables(self):
         for name, table in [("AccountFunction", "AccountTable"),
                             ("AccountProvisionFunction", "AccountTable"),
+                            ("AccountRecoveryFunction", "AccountTable"),
                             ("PlayerFunction", "PlayerTable")]:
             statements = self.resources[name]["Properties"]["Policies"]
             rendered = repr(statements)
@@ -100,6 +101,18 @@ class TemplateContractTests(unittest.TestCase):
         self.assertNotIn("sqs:SendMessage", auth_policies)
         confirmed_policies = repr(self.resources["AccountConfirmedFunction"]["Properties"]["Policies"])
         self.assertIn("sqs:SendMessage", confirmed_policies)
+
+    def test_recovery_endpoint_is_subject_authorized_and_least_privilege(self):
+        recovery = self.resources["AccountRecoveryFunction"]["Properties"]
+        self.assertEqual(recovery["Events"]["Recover"]["Type"], "Api")
+        route = recovery["Events"]["Recover"]["Properties"]
+        self.assertEqual((route["Method"], route["Path"]), ("POST", "/account/reconcile"))
+        self.assertNotEqual(route.get("Auth", {}).get("Authorizer"), "NONE")
+        self.assertIn("AccountTable", repr(recovery["Policies"]))
+        self.assertIn("AccountQueue", repr(recovery["Policies"]))
+        self.assertNotIn("PlayerTable", repr(recovery["Policies"]))
+        self.assertNotIn("AdminCreateUser", repr(recovery["Policies"]))
+        self.assertNotIn("sqs:SendMessage", repr(self.resources["AccountFunction"]["Properties"]["Policies"]))
 
     def test_queue_provision_and_dlq(self):
         events = self.resources["AccountProvisionFunction"]["Properties"]["Events"]
