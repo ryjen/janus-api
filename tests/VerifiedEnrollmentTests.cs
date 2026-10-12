@@ -7,16 +7,19 @@ namespace Janus.Tests;
 public class VerifiedEnrollmentTests
 {
     private static JObject Event(string trigger, string verified, string sub = "user-123", string email = "member@example.invalid")
-        => JObject.Parse($$"""
+        => new JObject
         {
-          "triggerSource": "{{trigger}}",
-          "request": {"userAttributes": {
-            "sub": "{{sub}}",
-            "email": "{{email}}",
-            "email_verified": "{{verified}}"
-          }}
-        }
-        """);
+            ["triggerSource"] = trigger,
+            ["request"] = new JObject
+            {
+                ["userAttributes"] = new JObject
+                {
+                    ["sub"] = sub,
+                    ["email"] = email,
+                    ["email_verified"] = verified
+                }
+            }
+        };
 
     [Fact]
     public void ConfirmedAndEmailVerifiedSignupAllowsProvisioning()
