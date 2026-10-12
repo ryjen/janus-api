@@ -1,31 +1,21 @@
 @startuml
-class User {
-  -String id
-  -String email
-  -String password
-  -String phone
-  +authenticate()
-  +newPassword()
-  +signUp()
+title Janus — identity and application record relationship
+class "Cognito user" as Cognito {
+  +sub: string
+  +email: string
 }
-
-note right
-  Users exist in cognito
-  with verified fields
-end note
-
-class Account {
-   - String accountID
-   - String email
-   - String subscription
-   - etc
+class "Account DynamoDB record" as Account {
+  +id: string = Cognito sub
+  +data.email: string
+  +data.subscriptions: list
 }
-
-note right
-  User id to account id in
-  one to one mapping
+class "Player DynamoDB record" as Player {
+  +id: string = Cognito sub
+  +data: JSON
+}
+Cognito "1" -- "0..1" Account: asynchronously provisioned
+Cognito "1" -- "0..1" Player: subject-scoped
+note bottom of Account
+Account HTTP access is read-only.
 end note
-
-User "1" -- "1" Account
-
 @enduml
