@@ -1,34 +1,44 @@
-# Architecture and security boundaries
+# Architecture, access control and operational boundaries
 
-Janus separates identity management, HTTP request handling and application record persistence.
+Janus is a historical serverless backend prototype, now being prepared as a read-only portfolio case study rather than a hardened authentication product.
 
-## Flow
+## Control plane
 
-1. `POST /signup` calls Cognito `AdminCreateUser` and publishes an account event to SQS. The caller receives the Cognito identity before asynchronous persistence completes.
-2. The **dedicated** `accountProvision` Lambda consumes SQS records and conditionally creates one DynamoDB account keyed by Cognito `sub`. Repeated deliveries do not overwrite an existing record.
-3. Account and player routes require an API Gateway Cognito authorizer. The Lambda then obtains `sub` exclusively from authorizer claims and derives the DynamoDB key. A mismatched caller-supplied ID is rejected.
-4. DynamoDB table names are stage-scoped. The generic data route has no deployment mapping.
+AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito as the default authorizer**, a usage plan / API key, three identity/data Lambdas, a dedicated SQS consumer, two DynamoDB tables, and a dead-letter queue. Resources are stack-scoped; no pre-existing production table or identity migration is implied.
 
-## Trust boundaries
+## Request boundary
 
-| Boundary | Control | Remaining risks |
+1. `POST /signup` calls Cognito admin signup, then publishes an account event to SQS. It intentionally opts out of Cognito authorization, but remains API-key protected.
+2. A dedicated Lambda consumes the queue, conditionally creating the account keyed by Cognito `sub`. Idempotent repeated deliveries cannot overwrite existing account data. The queue retries failures and uses a DLQ after repeated failures.
+3. `/account` only allows GET; `/player` supports GET/POST/PUT/DELETE for **the current subject only**. API Gateway first validates the ID token; the Lambda uses only the validated authorizer `sub` and rejects a contradictory caller-supplied ID.
+4. The generic arbitrary-table `/data` handler is not configured for deployment. An explicit allowlisted API is required before reintroducing any such functionality.
+
+## Trust boundary and controls
+
+| Boundary | Control | Residual risk |
 | --- | --- | --- |
-| External client -> API Gateway | API key on all HTTP methods; Cognito authorizer on protected record routes | API key is not a user principal. Signup abuse/rate limiting needs separate controls. |
-| API Gateway -> Lambda | Authorizer claims are checked fail-closed | HTTP handlers rely on requests arriving via configured API Gateway; direct invocation privileges must be controlled by AWS IAM. |
-| Auth Lambda -> Cognito | Scoped user-pool ARN | Prototype uses administrative password auth; credential abuse and challenge flows need integration tests. |
-| Auth Lambda -> SQS -> accountProvision | Typed account message and conditional DynamoDB insert | Malformed messages go to a DLQ; account may not yet exist immediately after signup. |
-| Lambda -> DynamoDB | Subject-derived keys for HTTP records, stage-specific tables | Provider-level IAM roles are broader than ideal; content validation and per-function IAM remain work. |
+| Untrusted client → API Gateway | Per-API usage plan, key requirement, default Cognito authorizer | Keys are not user auth; abuse protection remains incomplete. |
+| API Gateway → Lambda | Cognito claim `sub`, checked against any supplied record ID | Direct Lambda invocation must remain IAM restricted; full sandbox negative-path tests not yet run. |
+| Auth → Cognito | IAM action subset against a single pool ARN | Admin password authentication requires account lockout and threat review. |
+| Auth → SQS → provision | SQS redrive policy; conditional DynamoDB put | Successful Cognito signup followed by failed enqueue can leave orphaned identity. |
+| Function → DynamoDB | Separate execution roles per function, table-scoped IAM | Request body schema/field validation is incomplete; authorized callers can overwrite their own player record. |
 
-## Important implementation decisions
+## Decisions and trade-offs
 
-- **Cognito over custom credential storage.** Password authentication and identity lifecycle are delegated. The app does not validate a JWT locally or use unverified decoded claims for identity.
-- **SQS for account creation.** Decouples identity and persistence but deliberately introduces eventual consistency and retry semantics. The consumer uses a conditional write to avoid overwriting existing accounts.
-- **Subject-keyed records.** Simple ownership rule suitable for single-record-per-user prototypes; it is not an extensible authorization design for shared/organizational resources.
-- **Fail-closed data exposure.** The former generic `/data` route is not registered because table-level and object-level authorization were absent.
-- **Stage-scoped resources.** Allows isolated experiments at the cost of an explicit data and user-pool migration before reusing an existing installation.
+**Managed Cognito** delegates passwords, identity lifecycle and token signature verification. The original `ReadJwtToken` identity helper was removed because decoding is not verification.
 
-## Validated versus not validated
+**SQS** decouples authentication from persistence and introduces eventual consistency. Conditional writes support at-least-once delivery; reconciliation of abandoned identities is still needed.
 
-The repository contains source-level access-policy unit tests and build configuration. No AWS integration test, Cognito round-trip, CloudFormation deploy, account-provisioning DLQ recovery or penetration test has yet been verified against a deployed system.
+**Subject-keyed records** are simple and make cross-tenant access difficult when correctly enforced, but do not implement organization/team-level authorization.
 
-Before production consideration: separate the IAM roles, introduce bounded request DTO validation and data schema ownership, define account deletion semantics, monitor queue age and DLQ depth, test challenge and recovery flows, add abuse protections, and formalize migration/backup plans.
+**Per-function IAM** limits the blast radius of record functions versus a shared provider-wide role. This does not replace Lambda invocation and API Gateway access policies.
+
+**SAM** removes the obsolete npm-based Serverless Framework packaging path; local `dotnet publish` produces artifacts and `sam validate --lint` checks the template. Deployment remains a separate explicit operation.
+
+## Outstanding verification
+
+- Build + unit tests on .NET 10, pinned dependency updates and C# static analysis.
+- API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests.
+- SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
+- DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
+- Credential incident and Git history scan before creating any **public** mirror.

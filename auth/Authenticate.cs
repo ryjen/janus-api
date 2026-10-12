@@ -22,7 +22,7 @@ public partial class Auth
             {
                 UserPoolId = _userPoolId,
                 ClientId = _clientId,
-                AuthFlow = AuthFlowType.ADMIN_NO_SRP_AUTH,
+                AuthFlow = AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
                 AuthParameters = new Dictionary<string, string>
                 {
                     {"USERNAME", email},
@@ -36,7 +36,7 @@ public partial class Auth
                 return Challenged(authResponse.ChallengeName, authResponse.Session);
             }
 
-            string token = authResponse.AuthenticationResult.AccessToken;
+            string token = authResponse.AuthenticationResult.IdToken;
 
             return Response(OK, new { Token = token });
         }

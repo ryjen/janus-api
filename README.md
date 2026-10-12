@@ -1,73 +1,63 @@
 # Janus API
 
-**Serverless .NET backend reference implementation** — AWS Lambda, API Gateway, Amazon Cognito, DynamoDB, and SQS.
+**Serverless C#/.NET 10 portfolio reference** using AWS Lambda, API Gateway, Cognito, SQS and DynamoDB.
 
-> **Status: historical prototype under modernization.** This repository documents serverless architecture and its security trade-offs; it is **not** a vetted production identity service or a hosted API. No deployed AWS environment has been verified.
+> **Historical prototype being modernized.** The implementation, tests and infrastructure template are not yet verified together in an AWS sandbox. Do not use it as a hosted identity service or production deployment.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Client[API client] --> APIGW[API Gateway]
-    APIGW --> Auth[Auth Lambda]
-    Auth --> Cognito[Amazon Cognito]
+    Client[API client] --> API[API Gateway REST API]
+    API --> Auth[Auth Lambda]
+    API --> Account[Account GET Lambda]
+    API --> Player[Player CRUD Lambda]
+    Auth --> Cognito[Cognito user pool]
     Auth --> Queue[SQS]
-    Queue --> Provision[Account provisioning Lambda]
-    Provision --> Account[(DynamoDB: Account)]
-    APIGW --> Records[Account and player Lambdas]
-    Records --> Account
-    Records --> Player[(DynamoDB: Player)]
+    Queue --> Provision[Provision Lambda]
+    Provision --> AccountDB[(DynamoDB Account)]
+    Account --> AccountDB
+    Player --> PlayerDB[(DynamoDB Player)]
 ```
 
-Janus explores separating identity lifecycle from account persistence. Cognito manages identity; signup queues account provisioning through SQS. DynamoDB stores application records. Account and player read/write routes are scoped to the authenticated Cognito subject. See [architecture and design decisions](docs/architecture.md).
+Signup creates a Cognito user and enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
 
-## Supported API surface
+## Auth and API surface
 
-| Route | Method | Access | Notes |
-| --- | --- | --- | --- |
-| `/signup` | POST | API key | Starts Cognito signup and queues account provisioning; takes `email` and `password`. |
-| `/authenticate` | POST | API key | Cognito authentication, returns token or new-password challenge. |
-| `/reset` | POST | API key | Completes new-password challenge with its session. |
-| `/account` | GET | API key + Cognito bearer token | Reads only the authenticated subject's account. |
-| `/player` | GET/POST/PUT/DELETE | API key + Cognito bearer token | Operates only on the authenticated subject's player record. |
+| Route | Methods | Access |
+| --- | --- | --- |
+| `/signup`, `/authenticate`, `/reset` | POST | Usage-plan API key; Cognito identity actions |
+| `/account` | GET | Usage-plan API key + Cognito ID token |
+| `/player` | GET, POST, PUT, DELETE | Usage-plan API key + Cognito ID token |
 
-The former generic `/data` CRUD endpoint is **not deployed**: accepting a caller-selected table and record ID was an unsafe boundary. Account mutation is also disabled at the HTTP layer. API keys are not user authentication; the Cognito authorizer is applied separately to identity-scoped record routes. Do not infer production readiness from these safeguards alone.
+For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. API Gateway is configured with a Cognito default authorizer; the three auth flows explicitly opt out while retaining their API-key requirement.
 
-A client may omit the `id` query/body field on account and player routes; when provided it must match the token subject. The server always obtains the actual record ID from the authorizer claims, never from the supplied field.
+The generic `/data` endpoint is **not registered**. Account HTTP mutation is disabled. An optional record `id` may be supplied only if it matches the authenticated `sub`; the effective record key always comes from verified authorizer claims.
 
-## Build and test
+## Local build and infrastructure validation
 
-**Build compatibility blocker:** the existing pinned Serverless Framework v3 toolchain predates support for .NET 10. This branch has not yet regenerated the npm lockfile for an upgrade or migrated infrastructure packaging to SAM. The commands below describe the intended validation, **not successful execution**. See [issue #7](https://github.com/ryjen/janus-api/issues/7). Do not deploy while this is unresolved.
-
-Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), `zip`, Node.js/npm, and the Amazon Lambda .NET CLI tooling. AWS credentials are required only for an explicitly authorized deployment.
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html). No npm or Serverless Framework account is required.
 
 ```bash
-npm ci
-dotnet restore
-dotnet build janus.sln --configuration Release
-dotnet test tests/janus.tests.csproj --configuration Release
 ./build.sh
+sam validate --template template.yaml --lint
 ```
 
-For a local-only configuration check (no deployment):
+`build.sh` runs restore, build, tests, and produces three Lambda publish directories under `dist/`. The SAM template points at those artifacts; validation and deployment are separate operations.
 
-```bash
-API_KEY=local-not-for-deployment npx serverless print --stage sandbox
-```
+**The above commands are not yet verified to pass on this branch.** Exact package/build and AWS behaviour remain acceptance criteria in [issue #7](https://github.com/ryjen/janus-api/issues/7). No CI or deployment success is claimed.
 
-**Do not deploy this template to an existing Janus environment.** Resource names and tables now include the Serverless stage, and .NET 10 replaces .NET 6; existing DynamoDB records, Cognito users and deployment state are not automatically migrated.
+## Sandbox deployment (manual, after verification)
 
-A first sandbox deployment requires separately scoped AWS credentials and a generated API key (for example, `openssl rand -hex 32` in a gitignored `.env` file). Review IAM, billing, Cognito signup-abuse controls, DynamoDB throughput and migration plans first. Never commit or share credentials.
+The template is stack-scoped. To test in disposable AWS infrastructure, review the plan, pricing and identity configuration, then package/deploy via SAM using dedicated sandbox credentials. There is **no automatic deploy workflow**, no published endpoint, and no migration of old Janus data or Cognito users. A fresh stack uses new tables and identities, with point-in-time recovery enabled for its DynamoDB tables.
 
-## Design and limitations
+For IAM, SAM creates separate execution roles for authentication, HTTP data access and account provisioning. SQS accounts have a retry policy and dead-letter queue. API Gateway usage plans throttle traffic; they are not a comprehensive anti-abuse control.
+
+## Project material
 
 - [Architecture and trust boundaries](docs/architecture.md)
-- [Publication gate](docs/publication-gate.md)
-- [Security reporting](SECURITY.md)
+- [Security limitations and reporting](SECURITY.md)
+- [Publication and history gate](docs/publication-gate.md)
 - [Changelog](CHANGELOG.md)
 
-The implementation retains several prototype constraints: provider-wide IAM permissions rather than per-Lambda roles, limited request schema validation, unverified AWS deployment/integration behaviour, no rate limiting or abuse-control design, and no migration tooling. The tests are not an end-to-end security assurance. The project has not yet been assigned an open-source license.
-
-## Background
-
-The name refers to Janus, the Roman god of gates, transitions and passages. The project is intended as an architectural learning exercise, not an authentication product.
+**Public status:** still private pending clean-history and credential-revocation review. This reference has not been licensed for third-party reuse.

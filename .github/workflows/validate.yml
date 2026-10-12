@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       run_private:
-        description: 'Explicitly authorize a private GitHub-hosted build'
+        description: Explicitly authorize a private GitHub-hosted build
         type: boolean
         default: false
 
@@ -16,27 +16,18 @@ permissions:
 
 jobs:
   build-and-test:
-    # No GitHub-hosted minutes are consumed while this portfolio source is private.
+    # Avoid spending GitHub-hosted minutes on a private portfolio source by default.
     if: ${{ github.event.repository.private == false || (github.event_name == 'workflow_dispatch' && inputs.run_private) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: '10.0.x'
-      - name: Restore, build, and test
+      - name: Build, test and publish Lambda artifacts
+        run: ./build.sh
+      - name: Validate infrastructure template (no deployment)
         run: |
-          dotnet restore janus.sln
-          dotnet build janus.sln --no-restore --configuration Release
-          dotnet test tests/janus.tests.csproj --configuration Release
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-          cache: npm
-      - name: Validate Serverless configuration without deploying
-        env:
-          API_KEY: example-local-never-deploy
-        run: |
-          npm ci
-          npx serverless print --stage sandbox
+          python3 -m pip install 'cfn-lint>=1,<2'
+          cfn-lint template.yaml
