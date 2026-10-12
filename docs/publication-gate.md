@@ -9,7 +9,9 @@
 - [ ] Create a separate reviewed public source snapshot with a clean new history; exclude private CI, production identifiers, account data, credentials, environment files, and provenance that should stay private.
 - [ ] Select and explicitly approve an open-source license and verify ownership/third-party rights.
 - [x] Replace obsolete Serverless Framework files with an AWS SAM template, per-function IAM and local dotnet publish entrypoints (source committed; runtime and deployment validation still pending).
-- [ ] Build and test the exact candidate with .NET 10, then run `sam validate --lint` and review the expanded SAM/CloudFormation for auth and resource wiring; review dependencies/SBOM.
+- [x] Locally restore/build the .NET 10 candidate; run six C# ownership tests and publish all three Lambda artifact directories using `build.sh` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and six Python contract tests passed.
+- [ ] Run AWS SAM CLI template/package validation and inspect the expanded CloudFormation auth/IAM/resource wiring. Repeat local tests at the *exact final revision*; review dependencies and SBOM.
+- [ ] Obtain independent review of build output, tests, SAM template and security assumptions.
 - [ ] Exercise protected routes with missing, invalid and cross-user auth; test Cognito signup/challenge, SQS retry and DLQ handling in disposable AWS infrastructure.
 - [ ] Reconcile README diagrams, supported API claims, CI, and current limitations with the exact publication candidate.
 - [ ] Get an independent security/publication review before changing visibility. No production deploy is implied by publication.

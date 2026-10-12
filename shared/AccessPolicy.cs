@@ -1,3 +1,4 @@
+#nullable enable
 namespace Janus;
 
 public static class AccessPolicy
