@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>GameplaySharedDataSystem</AssemblyName>
     <PackageId>janus-shared</PackageId>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -12,7 +12,6 @@
     <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="2.1.0" />
     <PackageReference Include="AWSSDK.CognitoIdentityProvider" Version="3.7.300.1" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.0" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Amazon.Lambda.Core" />
