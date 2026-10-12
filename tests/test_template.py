@@ -52,7 +52,8 @@ class TemplateContractTests(unittest.TestCase):
         self.assertIn("JanusCognitoAuthorizer", auth["Authorizers"])
 
     def test_auth_routes_are_the_only_authorizer_opt_out(self):
-        expected = {("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset")}
+        expected = {("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset"),
+                    ("POST", "/password/forgot"), ("POST", "/password/confirm")}
         actual = set()
         for func, event, method, path, auth in self.routes:
             if auth.get("Authorizer") == "NONE":
@@ -65,6 +66,7 @@ class TemplateContractTests(unittest.TestCase):
         actual = {(method, path) for _,_,method,path,_ in self.routes}
         expected = {
             ("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset"),
+            ("POST", "/password/forgot"), ("POST", "/password/confirm"),
             ("GET", "/account"), ("POST", "/account/reconcile"), ("GET", "/player"), ("POST", "/player"),
             ("PUT", "/player"), ("DELETE", "/player")
         }
@@ -102,6 +104,10 @@ class TemplateContractTests(unittest.TestCase):
             self.assertIn(table, rendered)
             other = "AccountTable" if table == "PlayerTable" else "PlayerTable"
             self.assertNotIn(other, rendered)
+
+    def test_cognito_client_suppresses_user_enumeration(self):
+        props = self.resources["AccountPoolClient"]["Properties"]
+        self.assertEqual(props.get("PreventUserExistenceErrors"), "ENABLED")
 
     def test_signup_provisioning_requires_confirmed_cognito_event(self):
         user_pool = self.resources["AccountPool"]["Properties"]

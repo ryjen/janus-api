@@ -25,7 +25,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 
 ## Decisions and trade-offs
 
-**Managed Cognito** delegates passwords, identity lifecycle and token signature verification. The original `ReadJwtToken` identity helper was removed because decoding is not verification.
+**Managed Cognito** delegates passwords, identity lifecycle and token signature verification. The app client explicitly sets `PreventUserExistenceErrors: ENABLED` to avoid the default legacy account-enumeration behavior. Public password recovery uses Cognito `ForgotPassword` and `ConfirmForgotPassword`, not the legacy administrative `NEW_PASSWORD_REQUIRED` challenge route. The original `ReadJwtToken` identity helper was removed because decoding is not verification.
 
 **SQS** decouples authentication from persistence and introduces eventual consistency. Conditional writes support at-least-once delivery; reconciliation of abandoned identities is still needed.
 
@@ -38,7 +38,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 ## Outstanding verification
 
 - .NET 10 release build and nineteen unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
-- API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests.
+- API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests, non-enumerating password recovery, expired or incorrect reset codes and rate limits.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
 - Credential incident and Git history scan before creating any **public** mirror.
