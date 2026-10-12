@@ -96,16 +96,6 @@ functions:
             type: COGNITO_USER_POOLS
             arn:
               Fn::GetAtt: [AccountPool, Arn]
-      - http:
-          path: /account
-          method: delete
-          cors: true
-          private: true
-          authorizer:
-            name: JanusCognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn:
-              Fn::GetAtt: [AccountPool, Arn]
     package:
       artifact: bin/Release/net10.0/account.zip
 
