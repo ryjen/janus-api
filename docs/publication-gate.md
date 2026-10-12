@@ -12,6 +12,7 @@
 - [x] Locally restore/build the .NET 10 candidate; run six C# ownership tests and publish all three Lambda artifact directories using `build.sh` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and six Python contract tests passed.
 - [ ] Run AWS SAM CLI template/package validation and inspect the expanded CloudFormation auth/IAM/resource wiring. Repeat local tests at the *exact final revision*; review dependencies and SBOM.
 - [ ] Obtain independent review of build output, tests, SAM template and security assumptions.
+- [ ] Replace the unverified administrative registration path with an email-confirmed Cognito enrollment/provisioning flow; see [security issue #9](https://github.com/ryjen/janus-api/issues/9).
 - [ ] Exercise protected routes with missing, invalid and cross-user auth; test Cognito signup/challenge, SQS retry and DLQ handling in disposable AWS infrastructure.
 - [ ] Reconcile README diagrams, supported API claims, CI, and current limitations with the exact publication candidate.
 - [ ] Get an independent security/publication review before changing visibility. No production deploy is implied by publication.
