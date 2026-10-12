@@ -1,5 +1,8 @@
 # Unreleased
 
+- Explicitly suppress Cognito account-existence errors, and add code-based forgotten-password request/confirmation routes with generic response behavior; retain and correctly describe legacy /reset challenge semantics.
+
+
 - Validate SAM CLI 1.168.0 template with focused W3005 exception for generated API usage-plan dependencies; add SAM validation to CI.
 - Replace unverified administrative self-enrollment with Cognito email-confirmed signup and a PostConfirmation SQS provisioning trigger; cloud integration remains blocked.
 

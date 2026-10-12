@@ -108,6 +108,7 @@ Resources:
       ClientName: !Sub '${AWS::StackName}-client'
       UserPoolId: !Ref AccountPool
       GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
       ExplicitAuthFlows:
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
@@ -183,6 +184,24 @@ Resources:
           Properties:
             RestApiId: !Ref JanusApi
             Path: /reset
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: true
+        StartPasswordRecovery:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /password/forgot
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: true
+        ConfirmPasswordRecovery:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /password/confirm
             Method: POST
             Auth:
               Authorizer: NONE

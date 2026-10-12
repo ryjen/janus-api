@@ -29,12 +29,15 @@ Signup uses Cognito self-enrollment, followed by email-code confirmation at `POS
 
 | Route | Methods | Access |
 | --- | --- | --- |
-| `/signup`, `/confirm`, `/authenticate`, `/reset` | POST | Usage-plan API key; Cognito identity actions |
+| `/signup`, `/confirm`, `/authenticate` | POST | Usage-plan API key; Cognito enrollment/authentication |
+| `/password/forgot` | POST | Usage-plan API key; request a reset code using `email` (non-enumerating response) |
+| `/password/confirm` | POST | Usage-plan API key; redeem `email`, `code`, `password` to set a new password; then authenticate again |
+| `/reset` | POST | Legacy `NEW_PASSWORD_REQUIRED` administrator-created-user challenge; **not** a forgot-password flow |
 | `/account` | GET | Usage-plan API key + Cognito ID token |
 | `/account/reconcile` | POST | Usage-plan API key + Cognito ID token with verified email |
 | `/player` | GET, POST, PUT, DELETE | Usage-plan API key + Cognito ID token |
 
-For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. API Gateway is configured with a Cognito default authorizer; the four auth flows explicitly opt out while retaining their API-key requirement.
+For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. The Cognito app client explicitly enables `PreventUserExistenceErrors`; password recovery always responds generically to unknown accounts and requires Cognito's confirmation code to change a password. Neither policy replaces abuse/rate-limit testing in AWS. API Gateway is configured with a Cognito default authorizer; the six unauthenticated identity routes explicitly opt out while retaining their API-key requirement.
 
 The generic `/data` endpoint is **not registered**. Account HTTP mutation is disabled. An optional record `id` may be supplied only if it matches the authenticated `sub`; the effective record key always comes from verified authorizer claims.
 
