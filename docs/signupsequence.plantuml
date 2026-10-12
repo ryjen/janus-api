@@ -6,6 +6,7 @@ participant "Auth Lambda" as Auth
 participant "Amazon Cognito" as Cognito
 queue "SQS account queue" as Queue
 participant "Provision Lambda" as Provision
+participant "Account HTTP Lambda" as AccountRead
 database "Account DynamoDB" as DB
 Client -> Gateway: POST /signup (usage-plan API key)
 Gateway -> Auth: Invoke
@@ -22,11 +23,10 @@ Cognito create and SQS enqueue are not atomic.
 Missing event / poison message recovery remains a gap.
 end note
 Client -> Gateway: GET /account (API key + ID token)
-Gateway -> Cognito: Validate ID token via user-pool authorizer
-Cognito --> Gateway: Verified claims
-Gateway -> Provision: (no direct invocation)
-note right of Gateway
-The account HTTP Lambda uses the validated
-sub as the DynamoDB record key.
-end note
+Gateway -> Gateway: Validate ID token using Cognito authorizer
+Gateway -> AccountRead: Verified claims (sub)
+AccountRead -> DB: GetItem(id = sub)
+DB --> AccountRead: Account record
+AccountRead --> Gateway: Response
+Gateway --> Client: Account record
 @enduml
