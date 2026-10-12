@@ -1,3 +1,5 @@
+#nullable enable
+
 using Newtonsoft.Json.Linq;
 using AccountModel = Janus.Model.Account;
 
