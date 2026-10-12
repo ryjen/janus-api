@@ -29,6 +29,8 @@ public partial class Auth
                 return await NewPassword(request.Body.ToParams());
             case "/signup":
                 return await SignUp(request.Body.ToParams());
+            case "/confirm":
+                return await ConfirmSignUp(request.Body.ToParams());
             default:
                 return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
             }

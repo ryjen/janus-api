@@ -1,72 +1,63 @@
-
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider.Model;
 using static System.Net.HttpStatusCode;
-using Amazon.SQS;
-using Amazon.SQS.Model;
-using Newtonsoft.Json;
 
 namespace Janus;
 
 using static Shared;
-using AccountModel = Janus.Model.Account;
 using RequestParams = Dictionary<string, object>;
 
 public partial class Auth
 {
-    private readonly Database _db = new Database();
-    private readonly IAmazonSQS _sqs = new AmazonSQSClient();
-    private readonly string _sqsUrl = Environment.GetEnvironmentVariable("QUEUE_URL");
-
+    // Cognito self-enrollment sends a confirmation code to the claimed email.
+    // Do not provision an account based solely on an unverified signup request.
     public async Task<APIGatewayProxyResponse> SignUp(RequestParams request)
     {
         try
         {
-            string email = request["email"].ToString();
-            string password = request["password"].ToString();
+            var email = request["email"]?.ToString();
+            var password = request["password"]?.ToString();
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                return Response(BadRequest, new { Message = "Email and password required" });
 
-            var attributes = new List<AttributeType>();
-            var deliveryMediums = new List<string>();
-
-            attributes.Add(new AttributeType { Name = "email", Value = email });
-            deliveryMediums.Add("EMAIL");
-
-            var authRequest = new AdminCreateUserRequest
+            var result = await _cognitoClient.SignUpAsync(new SignUpRequest
             {
-                UserPoolId = _userPoolId,
+                ClientId = _clientId,
                 Username = email,
-                TemporaryPassword = password,
-                MessageAction = "SUPPRESS",
-                UserAttributes = attributes,
-                DesiredDeliveryMediums = deliveryMediums,
-            };
-            var authResponse = await _cognitoClient.AdminCreateUserAsync(authRequest);
-
-            var sub = authResponse.User.Attributes.Find(x => x.Name == "sub").Value;
-            var account = new AccountModel { Id = sub, Email = email };
-
-            await SendNewAccount(account);
-
-            return Response(OK, account);
+                Password = password,
+                UserAttributes = new List<AttributeType> {
+                    new AttributeType { Name = "email", Value = email }
+                }
+            });
+            return Response(OK, new { ConfirmationRequired = !result.UserConfirmed });
         }
         catch
         {
-            // TODO: handle rollback
-            return Response(Unauthorized, new { Message = "Authentication failed" });
+            return Response(BadRequest, new { Message = "Registration could not be completed" });
         }
     }
 
-    private async Task SendNewAccount(object message)
+    public async Task<APIGatewayProxyResponse> ConfirmSignUp(RequestParams request)
     {
-        var request = new SendMessageRequest
+        try
         {
-            QueueUrl = _sqsUrl,
-            MessageBody = JsonConvert.SerializeObject(message)
+            var email = request["email"]?.ToString();
+            var code = request["code"]?.ToString();
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
+                return Response(BadRequest, new { Message = "Email and confirmation code required" });
 
-        };
-
-        // Do not log account emails, queue URLs, or account payloads.
-
-        await _sqs.SendMessageAsync(request);
+            await _cognitoClient.ConfirmSignUpAsync(new ConfirmSignUpRequest
+            {
+                ClientId = _clientId,
+                Username = email,
+                ConfirmationCode = code
+            });
+            // Only the Cognito PostConfirmation trigger can enqueue the account.
+            return Response(OK, new { Confirmed = true });
+        }
+        catch
+        {
+            return Response(BadRequest, new { Message = "Confirmation could not be completed" });
+        }
     }
 }

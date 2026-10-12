@@ -52,7 +52,7 @@ class TemplateContractTests(unittest.TestCase):
         self.assertIn("JanusCognitoAuthorizer", auth["Authorizers"])
 
     def test_auth_routes_are_the_only_authorizer_opt_out(self):
-        expected = {("POST", "/signup"), ("POST", "/authenticate"), ("POST", "/reset")}
+        expected = {("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset")}
         actual = set()
         for func, event, method, path, auth in self.routes:
             if auth.get("Authorizer") == "NONE":
@@ -64,7 +64,7 @@ class TemplateContractTests(unittest.TestCase):
     def test_record_routes_are_limited(self):
         actual = {(method, path) for _,_,method,path,_ in self.routes}
         expected = {
-            ("POST", "/signup"), ("POST", "/authenticate"), ("POST", "/reset"),
+            ("POST", "/signup"), ("POST", "/confirm"), ("POST", "/authenticate"), ("POST", "/reset"),
             ("GET", "/account"), ("GET", "/player"), ("POST", "/player"),
             ("PUT", "/player"), ("DELETE", "/player")
         }
@@ -87,6 +87,19 @@ class TemplateContractTests(unittest.TestCase):
             self.assertIn(table, rendered)
             other = "AccountTable" if table == "PlayerTable" else "PlayerTable"
             self.assertNotIn(other, rendered)
+
+    def test_signup_provisioning_requires_confirmed_cognito_event(self):
+        user_pool = self.resources["AccountPool"]["Properties"]
+        self.assertTrue(user_pool["AutoVerifiedAttributes"] == ["email"])
+        self.assertEqual(user_pool["AdminCreateUserConfig"]["AllowAdminCreateUserOnly"], False)
+        self.assertIn("PostConfirmation", user_pool["LambdaConfig"])
+        self.assertEqual(self.resources["CognitoConfirmationInvokePermission"]["Type"],
+                         "AWS::Lambda::Permission")
+        auth_policies = repr(self.resources["AuthFunction"]["Properties"]["Policies"])
+        self.assertNotIn("AdminCreateUser", auth_policies)
+        self.assertNotIn("sqs:SendMessage", auth_policies)
+        confirmed_policies = repr(self.resources["AccountConfirmedFunction"]["Properties"]["Policies"])
+        self.assertIn("sqs:SendMessage", confirmed_policies)
 
     def test_queue_provision_and_dlq(self):
         events = self.resources["AccountProvisionFunction"]["Properties"]["Events"]
