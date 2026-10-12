@@ -42,3 +42,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
 - Credential incident and Git history scan before creating any **public** mirror.
+
+## Infrastructure lint interpretation
+
+AWS SAM CLI 1.168.0 accepts the template under `sam validate --template-file template.yaml --region ca-central-1`. The extended `--lint` run raises W3005 for `DependsOn` edges inserted **by the SAM transform** in generated API usage-plan resources; `.cfnlintrc` documents the exception for this single warning code. Source-level `cfn-lint`, SAM `--lint` (with the exception), and Python trust-boundary contract tests pass locally. The exception does not validate runtime authentication, stage permissions, or AWS deployment.
