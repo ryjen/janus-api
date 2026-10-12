@@ -10,9 +10,11 @@ using static Shared;
 public abstract class ModelHandler : DataHandler
 {
     private readonly string _entity;
+    private readonly bool _readOnly;
 
-    protected ModelHandler(string entity)
+    protected ModelHandler(string entity, bool readOnly = false)
     {
+        _readOnly = readOnly;
         _entity = Environment.GetEnvironmentVariable(entity.ToUpperInvariant() + "_TABLE")
             ?? throw new InvalidOperationException("Required table configuration is missing");
     }
@@ -22,6 +24,9 @@ public abstract class ModelHandler : DataHandler
         var claims = request.RequestContext?.Authorizer?.Claims;
         if (claims == null || !claims.TryGetValue("sub", out var subject) || string.IsNullOrWhiteSpace(subject))
             return Response(Unauthorized, new { Message = "Authentication required" });
+
+        if (_readOnly && request.HttpMethod != "GET")
+            return Response(MethodNotAllowed, new { Message = "This record is read-only" });
 
         try
         {
