@@ -1,19 +1,32 @@
-
 @startuml
-    skinparam monochrome true
-    User -> Janus: Signup Request
-    Janus -> Cognito: Signup Request
-    Cognito -> Janus: Signup Response
-    Janus -> DynamoDB: Create account
-    Janus -> User: Signup Response
-    User -> Janus: Authenticate New User
-    Janus -> Cognito: Authenticate Request
-    Cognito -> Janus: Challenge New Password
-    Janus -> Cognito: Challenge Response
-    Cognito -> Janus: Authenticate Response
-    Janus -> User: Authenticate Response
-    User -> Janus: Authenticate Existing User
-    Janus -> Cognito: Authenticate Request
-    Cognito -> Janus: Authenticate Response
-    Janus -> User: Authenticate Response
-    @enduml
+title Janus — signup and eventual account provisioning
+actor Client
+participant "API Gateway" as Gateway
+participant "Auth Lambda" as Auth
+participant "Amazon Cognito" as Cognito
+queue "SQS account queue" as Queue
+participant "Provision Lambda" as Provision
+database "Account DynamoDB" as DB
+Client -> Gateway: POST /signup (usage-plan API key)
+Gateway -> Auth: Invoke
+Auth -> Cognito: AdminCreateUser
+Cognito --> Auth: User sub
+Auth -> Queue: Send account-created event
+Auth --> Gateway: Identity accepted
+Gateway --> Client: Response
+Queue -> Provision: Deliver event (at least once)
+Provision -> DB: Conditional PutItem\nattribute_not_exists(id)
+DB --> Provision: Inserted or already exists
+note over Auth, DB
+Cognito create and SQS enqueue are not atomic.
+Missing event / poison message recovery remains a gap.
+end note
+Client -> Gateway: GET /account (API key + ID token)
+Gateway -> Cognito: Validate ID token via user-pool authorizer
+Cognito --> Gateway: Verified claims
+Gateway -> Provision: (no direct invocation)
+note right of Gateway
+The account HTTP Lambda uses the validated
+sub as the DynamoDB record key.
+end note
+@enduml
