@@ -1,3 +1,13 @@
+# Unreleased
+
+- Move to the .NET 10 managed AWS Lambda runtime.
+- Remove generic table-selected HTTP CRUD exposure and make account HTTP access read-only.
+- Require Cognito authorizer and subject-derived record IDs for account/player HTTP routes.
+- Split account SQS provisioning from HTTP routing; conditionally insert account records to survive duplicate delivery.
+- Namespace AWS table, user-pool and queue resources by stage; add SQS dead-letter queue.
+- Remove unvalidated JWT identity helper and personal-data message logging.
+- Add access-policy tests, architecture notes, and a publication gate.
+
 # v0.1.0
 
 - generic 'data' api endpoint for any table
