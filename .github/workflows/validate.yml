@@ -32,4 +32,6 @@ jobs:
           python3 -m venv .venv
           .venv/bin/python -m pip install 'cfn-lint>=1,<2'
           .venv/bin/cfn-lint template.yaml
+          .venv/bin/python -m pip install 'aws-sam-cli>=1.145,<2'
+          SAM_CLI_TELEMETRY=0 .venv/bin/sam validate --template-file template.yaml --lint --region ca-central-1
           .venv/bin/python -m unittest discover -s tests -p 'test_template.py'
