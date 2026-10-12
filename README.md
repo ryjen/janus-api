@@ -60,4 +60,6 @@ For IAM, SAM creates separate execution roles for authentication, HTTP data acce
 - [Publication and history gate](docs/publication-gate.md)
 - [Changelog](CHANGELOG.md)
 
+**Publication blocker:** the existing `/signup` path is an administrative prototype that has not established email ownership before provisioning. See [security issue #9](https://github.com/ryjen/janus-api/issues/9). Do not treat its account creation flow as a secure public registration design.
+
 **Public status:** still private pending clean-history and credential-revocation review. This reference has not been licensed for third-party reuse.

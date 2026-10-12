@@ -46,3 +46,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 ## Infrastructure lint interpretation
 
 AWS SAM CLI 1.168.0 accepts the template under `sam validate --template-file template.yaml --region ca-central-1`. The extended `--lint` run raises W3005 for `DependsOn` edges inserted **by the SAM transform** in generated API usage-plan resources; `.cfnlintrc` documents the exception for this single warning code. Source-level `cfn-lint`, SAM `--lint` (with the exception), and Python trust-boundary contract tests pass locally. The exception does not validate runtime authentication, stage permissions, or AWS deployment.
+
+## Publication-blocking identity design gap
+
+The legacy signup implementation accepts a caller-selected email and temporary password through `AdminCreateUser` and suppresses the Cognito invitation. This is not proof of control of the email address, and a subsequent password challenge must not be presented as email confirmation. The current design is not suitable for exposed self-service registration. [Issue #9](https://github.com/ryjen/janus-api/issues/9) tracks a verified enrollment flow with account provisioning only after trusted confirmation. This limitation prevents public deployment claims, independently of successful compilation and template checks.

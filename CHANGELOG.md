@@ -1,5 +1,8 @@
 # Unreleased
 
+- Validate SAM CLI 1.168.0 template with focused W3005 exception for generated API usage-plan dependencies; add SAM validation to CI.
+- Document unresolved email ownership verification in prototype account enrollment and block publication until addressed.
+
 - Move to the .NET 10 managed AWS Lambda runtime.
 - Replace unsupported Serverless Framework tooling with AWS SAM; separate per-function IAM, API key usage plan, resource names, DLQ and PITR for DynamoDB.
 - Return Cognito ID tokens to clients for API Gateway user-pool authorizer.
