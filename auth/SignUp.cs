@@ -29,7 +29,12 @@ public partial class Auth
                     new AttributeType { Name = "email", Value = email }
                 }
             });
-            return Response(OK, new { ConfirmationRequired = !result.UserConfirmed });
+            return SignupResponsePolicy.Acknowledged();
+        }
+        catch (UsernameExistsException)
+        {
+            // A duplicate address must look the same as an eligible signup.
+            return SignupResponsePolicy.Acknowledged();
         }
         catch
         {
