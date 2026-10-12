@@ -33,7 +33,7 @@ public abstract class ModelHandler : DataHandler
             switch (request.HttpMethod)
             {
                 case "GET":
-                    if (!AccessPolicy.MatchesSubject(subject, request.QueryStringParameters?.GetValueOrDefault("id")))
+                    if (!AccessPolicy.MatchesSubject(subject, request.QueryStringParameters is { } query && query.TryGetValue("id", out var queryId) ? queryId : null))
                         return Response(Forbidden, new { Message = "Access denied" });
                     return await Read(new ReadRequest { Entity = _entity, Id = subject });
                 case "POST":
