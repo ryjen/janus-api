@@ -58,7 +58,7 @@ public sealed class SubjectRecordService
 
         // The repository never receives a caller-selected key. Copy the body so
         // neither the store nor the caller can mutate the original request map.
-        var data = new Dictionary<string, object>(fields, StringComparer.Ordinal);
+        var data = fields.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         data.Remove("id");
         await _store.UpsertAsync(subject, data);
         return new RecordResult(RecordStatus.Ok);
