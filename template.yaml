@@ -15,7 +15,8 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: v1
-      EndpointConfiguration: REGIONAL
+      EndpointConfiguration:
+        Type: REGIONAL
       TracingEnabled: true
       Auth:
         DefaultAuthorizer: JanusCognitoAuthorizer
