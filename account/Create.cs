@@ -1,36 +1,27 @@
-
 using Amazon.Lambda.SQSEvents;
 using Newtonsoft.Json;
 
 namespace Janus;
 
-using static Shared;
 using AccountModel = Janus.Model.Account;
 
 public partial class Account
 {
-  public async Task Create(SQSEvent sqs, ILambdaContext context)
-  {
-	log(sqs);
-	try
-	{
-	  foreach (var record in sqs.Records)
-	  {
-		var account = JsonConvert.DeserializeObject<AccountModel>(record.Body);
+    // Dedicated SQS handler: an API Gateway proxy request cannot deserialize SQS records.
+    public async Task Provision(SQSEvent sqs, ILambdaContext context)
+    {
+        var table = Environment.GetEnvironmentVariable("ACCOUNT_TABLE")
+            ?? throw new InvalidOperationException("ACCOUNT_TABLE is not configured");
+        var db = new Database();
 
-		var request = new CreateRequest
-		{
-		  Entity = "account",
-		  Data = account
-		};
-		
-		await Create(request);
-	  }
-	}
-	catch (Exception ex)
-	{
-	  log(ex.Message);
-	  throw;
-	}
-  }
+        foreach (var record in sqs.Records)
+        {
+            var account = JsonConvert.DeserializeObject<AccountModel>(record.Body)
+                ?? throw new InvalidOperationException("Invalid account creation message");
+            if (string.IsNullOrWhiteSpace(account.Id) || string.IsNullOrWhiteSpace(account.Email))
+                throw new InvalidOperationException("Incomplete account creation message");
+
+            await db.CreateIfAbsent(new CreateRequest { Entity = table, Data = account }, account.Id);
+        }
+    }
 }

@@ -1,93 +1,72 @@
-# Project: Janus
+# Janus API
 
-Greek god of gates and passages.
+**Serverless C#/.NET 10 portfolio reference** using AWS Lambda, API Gateway, Cognito, SQS and DynamoDB.
 
-## Setup
+> **Historical prototype being modernized.** The implementation, tests and infrastructure template are not yet verified together in an AWS sandbox. Do not use it as a hosted identity service or production deployment.
 
-### 1. API key
+## Architecture
 
-Use a `.env` file to define `API_KEY=<KEY>`.
+```mermaid
+flowchart LR
+    Client[API client] --> API[API Gateway REST API]
+    API --> Auth[Auth Lambda]
+    API --> Account[Account GET Lambda]
+    API --> Player[Player CRUD Lambda]
+    Auth --> Cognito[Cognito user pool]
+    Cognito --> Confirmed[PostConfirmation Lambda]
+    Confirmed --> Queue[SQS]
+    Queue --> Provision[Provision Lambda]
+    Provision --> AccountDB[(DynamoDB Account)]
+    Account --> AccountDB
+    Recovery[Account recovery Lambda] --> AccountDB
+    Recovery --> Queue
+    Player --> PlayerDB[(DynamoDB Player)]
+```
 
-Use `openssl rand -hex 32` to generate a random key.
+Signup uses Cognito self-enrollment, followed by email-code confirmation at `POST /confirm`. **Only the trusted Cognito PostConfirmation trigger** enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. If confirmation succeeded but SQS provisioning was interrupted, an authenticated user with a verified email can call `POST /account/reconcile` to request idempotent recovery of their own missing account (202 queued, 200 already present, or 401/403/503). Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
 
-### 2. Install Serverless
+## Auth and API surface
 
-Depending on your system install `serverless` CLI application.
+| Route | Methods | Access |
+| --- | --- | --- |
+| `/signup`, `/confirm`, `/authenticate` | POST | Usage-plan API key; Cognito enrollment/authentication |
+| `/password/forgot` | POST | Usage-plan API key; request a reset code using `email` (non-enumerating response) |
+| `/password/confirm` | POST | Usage-plan API key; redeem `email`, `code`, `password` to set a new password; then authenticate again |
+| `/reset` | POST | Legacy `NEW_PASSWORD_REQUIRED` administrator-created-user challenge; **not** a forgot-password flow |
+| `/account` | GET | Usage-plan API key + Cognito ID token |
+| `/account/reconcile` | POST | Usage-plan API key + Cognito ID token with verified email |
+| `/player` | GET, POST, PUT, DELETE | Usage-plan API key + Cognito ID token |
 
-`yarn global add serverless` or `npm install -g serverless`
+For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. The Cognito app client explicitly enables `PreventUserExistenceErrors` for authentication and recovery. Signup also maps Cognito's `UsernameExistsException` to the same generic successful response as an eligible signup. These measures **reduce**, but do not eliminate, account-enumeration risk (for example, timing and delivery behavior). Password recovery responds generically to unknown accounts and requires Cognito's confirmation code to change a password. Neither policy replaces abuse/rate-limit testing in AWS. API Gateway is configured with a Cognito default authorizer; the six unauthenticated identity routes explicitly opt out while retaining their API-key requirement.
 
-### 3. AWS Credentials
+The generic `/data` endpoint is **not registered**. Account HTTP mutation is disabled. An optional record `id` may be supplied only if it matches the authenticated `sub`; the effective record key always comes from verified authorizer claims.
 
-Use the `aws configure` cli and command to configure aws and login.
+## Local build and infrastructure validation
 
-For more details see [aws quickstart](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) or [serverless docs](https://www.serverless.com/framework/docs).
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), and a native `zip` utility on Linux. The SAM build uses the AWS Lambda .NET packaging tool, which SAM installs when needed. No npm or Serverless Framework account is required.
 
-### 4. Dotnet Core 6
+```bash
+./build.sh
+sam validate --template-file template.yaml --region ca-central-1 --lint
+```
 
-Install `dotnet core` for your system.
+`build.sh` restores and tests the solution, then runs `sam build` on the three source projects (`auth/`, `account/`, and `player/`) to create deployable Lambda archives and a transformed template under `.aws-sam/build/`. This avoids stale `dist/` outputs. The script validates the source SAM template and **does not deploy**. Windows developers can use `build.cmd`.
 
-## Dev
+**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran nineteen C# unit tests, and produced all three Lambda artifact sets on a temporary Linux environment. Separately, `cfn-lint` and nine infrastructure contract tests passed. **AWS SAM CLI 1.168.0 validates the template and packages all functions locally (including `--lint` with a documented W3005 exception for generated usage-plan dependencies); the restricted validation host used a local `zip` compatibility helper for packaging. AWS upload/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
 
-### 1. `./build.sh` (or ./build.cmd on windows)
+## Sandbox deployment (manual, after verification)
 
-Build the function package
+The template is stack-scoped. To test in disposable AWS infrastructure, review the plan, pricing and identity configuration, then package/deploy via SAM using dedicated sandbox credentials. There is **no automatic deploy workflow**, no published endpoint, and no migration of old Janus data or Cognito users. A fresh stack uses new tables and identities, with point-in-time recovery enabled for its DynamoDB tables.
 
-### 2. `serverless deploy`
+For IAM, SAM creates separate execution roles for authentication, HTTP data access and account provisioning. SQS accounts have a retry policy and dead-letter queue. API Gateway usage plans throttle traffic; they are not a comprehensive anti-abuse control.
 
-Deploy the package
+## Project material
 
-### 3. `serverless log -f janus`
+- [Architecture and trust boundaries](docs/architecture.md)
+- [Security limitations and reporting](SECURITY.md)
+- [Publication and history gate](docs/publication-gate.md)
+- [Changelog](CHANGELOG.md)
 
-Get the logs
+**Enrollment design:** self-signup, email-code confirmation, and a Cognito PostConfirmation trigger are now implemented. The end-to-end behaviour is **not independently tested in AWS**; see [security issue #9](https://github.com/ryjen/janus-api/issues/9).
 
-## API
-
-### Authorization
-
-Requires an `email` and a `password`.
-
-Returns an authenticated JWT token that can be decoded for the ID (sub) and email
-
-If an authorization requires a new password from signup, will return 300 with a session token to use to reset.
-
-### Signup
-
-Requires an `email` and a `temp password`
-
-Returns the ID and email
-
-### New Password
-
-Requires an `email` and a `new password`
-
-Returns an authenticated JWT token for the session.
-
-## Data
-
-![class diagram](docs/classdia.png)
-
-![sequence diagram](docs/signupsequence.png)
-
-## Test
-
-### Postman
-
-Use the [postman janus-test](https://micrantha.postman.co/workspace/janus-test~8e5a5f6e-8288-49e0-9120-503cbe76537e/collection/18430765-ee086919-a64a-473e-b28f-024dcc95b05e?action=share&creator=18430765&active-environment=18430765-6ef21def-45ce-4f3c-ad10-ed66a71c71cb) project to run tests.
-
-### Flows
-
-#### Signup a user
-
-##### 1. `curl -v -H "Content-Type: application/json" -H "X-Api-Key: <APIKEY>" -d '{"email":"<EMAIL>","password":"<TEMPASS>"}' https://<URL>/signup`
-
-Authenticate the user to get the session for setting the password:
-
-##### 2. `curl -v -H "Content-Type: application/json" -H "X-Api-Key: <APIKEY>" -d '{"email":"<EMAIL>","password":"<PASSWORD>"}' https://<URL>/authenticate`
-
-Grab the session from the response and set the password:
-
-##### 3. `curl -v -H "Content-Type: application/json" -H "X-Api-Key: <APIKEY>" -d '{"email":"<EMAIL>","password":"<PASSWORD>","session":"<SESSION>"}' https://<URL>/reset`
-
-#### Authenticate a user
-
-##### 1. `curl -v -H "Content-Type: application/json" -H "X-Api-Key: <APIKEY>" -d '{"email":"<EMAIL>","password":"<PASSWORD>"}' https://<URL>/authenticate`
+**Public status:** still private pending clean-history and credential-revocation review. This reference has not been licensed for third-party reuse.

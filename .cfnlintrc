@@ -1,0 +1,6 @@
+# AWS SAM's generated API usage plan and usage-plan key add DependsOn entries
+# alongside implicit Ref dependencies. The transformed resources trigger W3005,
+# although these redundant dependency edges are not authored in template.yaml.
+# Keep all other CloudFormation/SAM lint checks enabled.
+ignore_checks:
+  - W3005

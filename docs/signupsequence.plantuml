@@ -1,19 +1,46 @@
-
 @startuml
-    skinparam monochrome true
-    User -> Janus: Signup Request
-    Janus -> Cognito: Signup Request
-    Cognito -> Janus: Signup Response
-    Janus -> DynamoDB: Create account
-    Janus -> User: Signup Response
-    User -> Janus: Authenticate New User
-    Janus -> Cognito: Authenticate Request
-    Cognito -> Janus: Challenge New Password
-    Janus -> Cognito: Challenge Response
-    Cognito -> Janus: Authenticate Response
-    Janus -> User: Authenticate Response
-    User -> Janus: Authenticate Existing User
-    Janus -> Cognito: Authenticate Request
-    Cognito -> Janus: Authenticate Response
-    Janus -> User: Authenticate Response
-    @enduml
+title Janus — email-confirmed signup and asynchronous account creation
+actor Client
+participant "API Gateway" as Gateway
+participant "Auth Lambda" as Auth
+participant "Amazon Cognito" as Cognito
+participant "PostConfirmation Lambda" as Confirmed
+queue "SQS account queue" as Queue
+participant "Provision Lambda" as Provision
+participant "Account HTTP Lambda" as AccountRead
+database "Account DynamoDB" as DB
+
+Client -> Gateway: POST /signup (API key)
+Gateway -> Auth: invoke
+Auth -> Cognito: SignUp (email and password)
+Cognito --> Client: Email confirmation code (via Cognito)
+Auth --> Gateway: Confirmation required
+Gateway --> Client: Confirmation pending
+
+Client -> Gateway: POST /confirm (email and code, API key)
+Gateway -> Auth: invoke
+Auth -> Cognito: ConfirmSignUp (email and code)
+Cognito -> Confirmed: PostConfirmation_ConfirmSignUp\nverified userAttributes
+Confirmed -> Queue: Send account event (sub + email)
+Confirmed --> Cognito: Return event
+Cognito --> Auth: Confirmation complete
+Auth --> Gateway: Success
+Gateway --> Client: Confirmation complete
+
+Queue -> Provision: Deliver (at least once)
+Provision -> DB: PutItem if id does not exist
+DB --> Provision: Created or already exists
+
+note over Cognito, DB
+Confirm and queue enqueue are not atomic.
+Failure recovery and DLQ reconciliation require AWS integration tests.
+end note
+
+Client -> Gateway: GET /account (API key + ID token)
+Gateway -> Gateway: Cognito authorizer verifies token
+Gateway -> AccountRead: Claims with verified sub
+AccountRead -> DB: GetItem(id = sub)
+DB --> AccountRead: Account
+AccountRead --> Gateway: Response
+Gateway --> Client: Account
+@enduml
