@@ -211,6 +211,33 @@ Resources:
             Path: /account
             Method: GET
 
+  AccountRecoveryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/account/
+      Handler: GameplayDataSystem::Janus.AccountRecovery::Handler
+      Environment:
+        Variables:
+          ACCOUNT_TABLE: !Ref AccountTable
+          QUEUE_URL: !Ref AccountQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+              Resource: !GetAtt AccountTable.Arn
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt AccountQueue.Arn
+      Events:
+        Recover:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /account/reconcile
+            Method: POST
+
   PlayerFunction:
     Type: AWS::Serverless::Function
     Properties:
