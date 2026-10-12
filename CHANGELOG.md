@@ -1,6 +1,8 @@
 # Unreleased
 
 - Move to the .NET 10 managed AWS Lambda runtime.
+- Replace unsupported Serverless Framework tooling with AWS SAM; separate per-function IAM, API key usage plan, resource names, DLQ and PITR for DynamoDB.
+- Return Cognito ID tokens to clients for API Gateway user-pool authorizer.
 - Remove generic table-selected HTTP CRUD exposure and make account HTTP access read-only.
 - Require Cognito authorizer and subject-derived record IDs for account/player HTTP routes.
 - Split account SQS provisioning from HTTP routing; conditionally insert account records to survive duplicate delivery.

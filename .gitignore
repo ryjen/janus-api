@@ -245,3 +245,7 @@ _Pvt_Extensions
 
 # Serverless directories
 .serverless*
+
+# Lambda publish output and AWS SAM build artifacts
+dist/
+.aws-sam/

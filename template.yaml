@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Janus: experimental .NET 10 serverless account and player API'
+
+Globals:
+  Function:
+    Runtime: dotnet10
+    Architectures: [x86_64]
+    MemorySize: 256
+    Timeout: 20
+    Tracing: Active
+
+Resources:
+  JanusApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: v1
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
+      Auth:
+        DefaultAuthorizer: JanusCognitoAuthorizer
+        ApiKeyRequired: true
+        AddApiKeyRequiredToCorsPreflight: false
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          JanusCognitoAuthorizer:
+            UserPoolArn: !GetAtt AccountPool.Arn
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Prototype traffic budget (not user authentication)
+          Throttle:
+            RateLimit: 3
+            BurstLimit: 6
+          Quota:
+            Limit: 1000
+            Period: MONTH
+
+  AccountTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-Account'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  PlayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-Player'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  AccountDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-account-dlq'
+      MessageRetentionPeriod: 1209600
+
+  AccountQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-account'
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AccountDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  AccountPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: true
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      MfaConfiguration: 'OFF'
+
+  AccountPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${AWS::StackName}-client'
+      UserPoolId: !Ref AccountPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/auth/
+      Handler: GameplayDataSystem::Janus.Auth::Handler
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref AccountPool
+          CLIENT_ID: !Ref AccountPoolClient
+          QUEUE_URL: !Ref AccountQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminInitiateAuth
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminRespondToAuthChallenge
+              Resource: !GetAtt AccountPool.Arn
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt AccountQueue.Arn
+      Events:
+        Signup:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /signup
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: true
+        Authenticate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /authenticate
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: true
+        ResetPassword:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /reset
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: true
+
+  AccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/account/
+      Handler: GameplayDataSystem::Janus.Account::Handler
+      Environment:
+        Variables:
+          ACCOUNT_TABLE: !Ref AccountTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+              Resource: !GetAtt AccountTable.Arn
+      Events:
+        Read:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /account
+            Method: GET
+
+  PlayerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/player/
+      Handler: GameplayDataSystem::Janus.Player::Handler
+      Environment:
+        Variables:
+          PLAYER_TABLE: !Ref PlayerTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: !GetAtt PlayerTable.Arn
+      Events:
+        Read:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /player
+            Method: GET
+        Update:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /player
+            Method: PUT
+        Create:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /player
+            Method: POST
+        Delete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanusApi
+            Path: /player
+            Method: DELETE
+
+  AccountProvisionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/account/
+      Handler: GameplayDataSystem::Janus.Account::Provision
+      Environment:
+        Variables:
+          ACCOUNT_TABLE: !Ref AccountTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:DescribeTable
+              Resource: !GetAtt AccountTable.Arn
+      Events:
+        AccountCreated:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AccountQueue.Arn
+            BatchSize: 1
+
+Outputs:
+  ApiEndpoint:
+    Description: Endpoint of the isolated prototype stack
+    Value: !Sub 'https://${JanusApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1'

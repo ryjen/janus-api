@@ -1,19 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
 
-FUNCTIONS="auth account player data"
+command -v dotnet >/dev/null || { echo "dotnet SDK 10 is required" >&2; exit 1; }
 
-DOTNET_VERSION="net10.0"
+dotnet restore janus.sln
+dotnet build janus.sln --configuration Release --no-restore
+dotnet test tests/janus.tests.csproj --configuration Release
 
-# Package prerequisites: the .NET SDK, Amazon.Lambda.Tools, and zip must be available.
-command -v zip >/dev/null || { echo 'zip is required' >&2; exit 1; }
-
-echo "Check lambda tools installed"
-dotnet tool install -g Amazon.Lambda.Tools --framework $DOTNET_VERSION 2>/dev/null
-
-echo "Restore project"
-dotnet restore
-
-for func in $FUNCTIONS; do
-	echo "Package $func"
-	dotnet lambda package --configuration Release --framework $DOTNET_VERSION --output-package bin/Release/"$DOTNET_VERSION"/"$func".zip --project-location "$func" || exit
+for func in auth account player; do
+  dotnet publish "$func/janus.csproj" --framework net10.0 --configuration Release --no-restore \
+    --output "dist/$func" --self-contained false
 done
+
+echo 'Lambda publish directories are in dist/. Run sam validate --lint separately.'

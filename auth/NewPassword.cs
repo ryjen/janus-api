@@ -32,7 +32,7 @@ public partial class Auth
             };
             var authResponse = await _cognitoClient.AdminRespondToAuthChallengeAsync(newPasswordRequest);
 
-            string token = authResponse.AuthenticationResult.AccessToken;
+            string token = authResponse.AuthenticationResult.IdToken;
 
             return Response(OK, new { Token = token });
         }
