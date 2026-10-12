@@ -1,5 +1,8 @@
 # Unreleased
 
+- Isolate subject-scoped record operations behind an application service and a per-resource DynamoDB adapter; add fake-port unit tests, stop mapping backend outages to HTTP 400, preserve existing record JSON and Lambda entry points.
+
+
 - Enable Cognito account-existence error protection for login/recovery, normalize duplicate-signup responses, and add code-based forgotten-password request/confirmation routes; retain and correctly describe legacy /reset challenge semantics.
 
 

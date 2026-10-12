@@ -1,124 +1,93 @@
+#nullable enable
+
 using Amazon.Lambda.APIGatewayEvents;
+using Newtonsoft.Json;
 using static System.Net.HttpStatusCode;
 
 namespace Janus;
 
 using static Shared;
 
-// All exposed record IDs are derived from the validated Cognito authorizer.
-// Client-supplied IDs may only confirm the same identity, never select another record.
-public abstract class ModelHandler : DataHandler
+// Lambda adapter: translates HTTP into application operations. Authorization
+// lives in SubjectRecordService, persistence behind IRecordStore.
+public abstract class ModelHandler
 {
+    private readonly SubjectRecordService _records;
     private readonly string _entity;
-    private readonly bool _readOnly;
 
-    protected ModelHandler(string entity, bool readOnly = false)
+    protected ModelHandler(string entity, bool readOnly = false, IRecordStore? store = null)
     {
-        _readOnly = readOnly;
-        _entity = Environment.GetEnvironmentVariable(entity.ToUpperInvariant() + "_TABLE")
-            ?? throw new InvalidOperationException("Required table configuration is missing");
+        _entity = entity;
+        _records = new SubjectRecordService(store ?? new DynamoRecordStore(entity), readOnly);
     }
 
-    public override async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
         var claims = request.RequestContext?.Authorizer?.Claims;
-        if (claims == null || !claims.TryGetValue("sub", out var subject) || string.IsNullOrWhiteSpace(subject))
+        string? subject = null;
+        if (claims is not null) claims.TryGetValue("sub", out subject);
+
+        if (string.IsNullOrWhiteSpace(subject))
             return Response(Unauthorized, new { Message = "Authentication required" });
 
-        if (_readOnly && request.HttpMethod != "GET")
+        if (_records.IsReadOnly && request.HttpMethod != "GET")
             return Response(MethodNotAllowed, new { Message = "This record is read-only" });
 
         try
         {
+            RecordResult result;
             switch (request.HttpMethod)
             {
                 case "GET":
-                    if (!AccessPolicy.MatchesSubject(subject, request.QueryStringParameters is { } query && query.TryGetValue("id", out var queryId) ? queryId : null))
-                        return Response(Forbidden, new { Message = "Access denied" });
-                    return await Read(new ReadRequest { Entity = _entity, Id = subject });
+                    string? id = null;
+                    request.QueryStringParameters?.TryGetValue("id", out id);
+                    result = await _records.ReadAsync(subject, id);
+                    break;
                 case "POST":
                 case "PUT":
-                    var update = request.Body.ToParams();
-                    if (!AccessPolicy.MatchesSubject(subject, update.GetValueOrDefault("id")?.ToString()))
-                        return Response(Forbidden, new { Message = "Access denied" });
-                    update.Remove("id");
-                    return await Update(new UpdateRequest { Entity = _entity, Id = subject, Data = update });
+                    result = await _records.UpsertAsync(subject, ParseFields(request.Body));
+                    break;
                 case "DELETE":
-                    var parameters = request.Body.ToParams();
-                    if (!AccessPolicy.MatchesSubject(subject, parameters.GetValueOrDefault("id")?.ToString()))
-                        return Response(Forbidden, new { Message = "Access denied" });
-                    return await Delete(new DeleteRequest { Entity = _entity, Id = subject });
+                    result = await _records.DeleteAsync(subject, ParseFields(request.Body));
+                    break;
                 default:
-                    return Response(BadRequest, new { Message = "Invalid request" });
+                    return Response(MethodNotAllowed, new { Message = "Method not allowed" });
             }
+
+            return result.Status switch
+            {
+                RecordStatus.Unauthorized => Response(Unauthorized, new { Message = "Authentication required" }),
+                RecordStatus.Forbidden => Response(Forbidden, new { Message = "Access denied" }),
+                RecordStatus.ReadOnly => Response(MethodNotAllowed, new { Message = "This record is read-only" }),
+                RecordStatus.Missing => Response(NotFound, new { Message = "Record not found" }),
+                RecordStatus.Ok when request.HttpMethod == "GET" => Response(OK, result.Json!),
+                RecordStatus.Ok when request.HttpMethod == "DELETE" => Response(OK, new { Message = _entity + " deleted" }),
+                RecordStatus.Ok => Response(OK, new { Message = _entity + " updated" }),
+                _ => Response(InternalServerError, new { Message = "Unexpected record status" })
+            };
         }
-        catch
+        catch (JsonException)
         {
-            return Response(BadRequest, new { Message = "Invalid request" });
+            return Response(BadRequest, new { Message = "Invalid JSON object" });
+        }
+        catch (ArgumentException)
+        {
+            return Response(BadRequest, new { Message = "Invalid record request" });
+        }
+        catch (Exception)
+        {
+            // Do not turn AWS/DynamoDB outages into a caller 400. No secrets or
+            // raw payloads are logged; monitoring can count 503s at the gateway.
+            return Response(ServiceUnavailable, new { Message = "Record service unavailable" });
         }
     }
-}
 
-public abstract class DataHandler
-{
-    private readonly Database _db;
-
-    public DataHandler()
+    private static Dictionary<string, object> ParseFields(string? body)
     {
-        _db = new Database();
-    }
+        if (string.IsNullOrWhiteSpace(body))
+            throw new ArgumentException("JSON object is required", nameof(body));
 
-    public abstract Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context);
-
-    public async Task<APIGatewayProxyResponse> Create(CreateRequest request)
-    {
-        try
-        {
-            var id = await _db.Create(request);
-            return Response(OK, new { Id = id, Message = request.Entity + " created" });
-        }
-        catch
-        {
-            return Response(BadRequest, new { Message = request.Entity + " create failed" });
-        }
+        return body.ToParams()
+            ?? throw new ArgumentException("JSON object is required", nameof(body));
     }
-    public async Task<APIGatewayProxyResponse> Read(ReadRequest request)
-    {
-        try
-        {
-            var entity = await _db.Read(request);
-            if (entity == null) return Response(NotFound, new { Message = "Record not found" });
-            return Response(OK, entity.ToJson());
-        }
-        catch
-        {
-            return Response(BadRequest, new { Message = request.Entity + " read failed" });
-        }
-    }
-
-    public async Task<APIGatewayProxyResponse> Update(UpdateRequest request)
-    {
-        try
-        {
-            await _db.Update(request);
-            return Response(OK, new { Message = string.Format("{0} updated", request.Entity) });
-        }
-        catch
-        {
-            return Response(BadRequest, new { Message = string.Format("{0} update failed") });
-        }
-    }
-    public async Task<APIGatewayProxyResponse> Delete(DeleteRequest request)
-    {
-        try
-        {
-            await _db.Delete(request);
-            return Response(OK, new { Message = string.Format("{0} deleted", request.Entity) });
-        }
-        catch
-        {
-            return Response(BadRequest, new { Message = string.Format("{0} delete failed", request.Entity) });
-        }
-    }
-
 }
