@@ -1,0 +1,39 @@
+name: Janus validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_private:
+        description: Explicitly authorize a private GitHub-hosted build
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # Avoid spending GitHub-hosted minutes on a private portfolio source by default.
+    if: ${{ github.event.repository.private == false || (github.event_name == 'workflow_dispatch' && inputs.run_private) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install infrastructure validation and packaging tools
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install 'cfn-lint==1.57.2' 'aws-sam-cli==1.168.0'
+      - name: Build, test, and package Lambda artifacts without deployment
+        run: |
+          export PATH="$PWD/.venv/bin:$PATH"
+          SAM_CLI_TELEMETRY=0 ./build.sh
+      - name: Validate infrastructure contract (no deployment)
+        run: |
+          .venv/bin/cfn-lint template.yaml
+          .venv/bin/python -m unittest discover -s tests -p 'test_template.py'

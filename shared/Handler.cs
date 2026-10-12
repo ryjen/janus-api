@@ -1,4 +1,3 @@
-
 using Amazon.Lambda.APIGatewayEvents;
 using static System.Net.HttpStatusCode;
 
@@ -6,72 +5,58 @@ namespace Janus;
 
 using static Shared;
 
+// All exposed record IDs are derived from the validated Cognito authorizer.
+// Client-supplied IDs may only confirm the same identity, never select another record.
 public abstract class ModelHandler : DataHandler
 {
     private readonly string _entity;
-    public ModelHandler(string entity)
+    private readonly bool _readOnly;
+
+    protected ModelHandler(string entity, bool readOnly = false)
     {
-        _entity = entity;
+        _readOnly = readOnly;
+        _entity = Environment.GetEnvironmentVariable(entity.ToUpperInvariant() + "_TABLE")
+            ?? throw new InvalidOperationException("Required table configuration is missing");
     }
 
     public override async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        var claims = request.RequestContext?.Authorizer?.Claims;
+        if (claims == null || !claims.TryGetValue("sub", out var subject) || string.IsNullOrWhiteSpace(subject))
+            return Response(Unauthorized, new { Message = "Authentication required" });
+
+        if (_readOnly && request.HttpMethod != "GET")
+            return Response(MethodNotAllowed, new { Message = "This record is read-only" });
+
         try
         {
             switch (request.HttpMethod)
             {
-            case "GET":
-                return await Read(ReadRequest(request));
-            case "POST":
-            case "PUT":
-                return await Update(UpdateRequest(request));
-            case "DELETE":
-                return await Delete(DeleteRequest(request));
+                case "GET":
+                    if (!AccessPolicy.MatchesSubject(subject, request.QueryStringParameters is { } query && query.TryGetValue("id", out var queryId) ? queryId : null))
+                        return Response(Forbidden, new { Message = "Access denied" });
+                    return await Read(new ReadRequest { Entity = _entity, Id = subject });
+                case "POST":
+                case "PUT":
+                    var update = request.Body.ToParams();
+                    if (!AccessPolicy.MatchesSubject(subject, update.GetValueOrDefault("id")?.ToString()))
+                        return Response(Forbidden, new { Message = "Access denied" });
+                    update.Remove("id");
+                    return await Update(new UpdateRequest { Entity = _entity, Id = subject, Data = update });
+                case "DELETE":
+                    var parameters = request.Body.ToParams();
+                    if (!AccessPolicy.MatchesSubject(subject, parameters.GetValueOrDefault("id")?.ToString()))
+                        return Response(Forbidden, new { Message = "Access denied" });
+                    return await Delete(new DeleteRequest { Entity = _entity, Id = subject });
+                default:
+                    return Response(BadRequest, new { Message = "Invalid request" });
             }
-
-            return Response(BadRequest, new { Message = "Invalid request" });
         }
         catch
         {
-            return Response(InternalServerError, new { Message = "Internal error" });
+            return Response(BadRequest, new { Message = "Invalid request" });
         }
     }
-
-    private ReadRequest ReadRequest(APIGatewayProxyRequest request)
-    {
-        var id = request.QueryStringParameters["id"];
-
-        return new ReadRequest
-        {
-            Entity = _entity,
-            Id = id
-        };
-    }
-
-    private UpdateRequest UpdateRequest(APIGatewayProxyRequest request)
-    {
-        var param = request.Body.ToParams();
-        var id = param["id"];
-        param.Remove("id");
-        return new UpdateRequest
-        {
-            Entity = _entity,
-            Id = id.ToString(),
-                   Data = param,
-        };
-    }
-
-    private DeleteRequest DeleteRequest(APIGatewayProxyRequest request)
-    {
-        var param = request.Body.ToParams();
-        var id = param["id"];
-        return new DeleteRequest
-        {
-            Entity = _entity,
-            Id = id.ToString()
-        };
-    }
-
 }
 
 public abstract class DataHandler
@@ -102,6 +87,7 @@ public abstract class DataHandler
         try
         {
             var entity = await _db.Read(request);
+            if (entity == null) return Response(NotFound, new { Message = "Record not found" });
             return Response(OK, entity.ToJson());
         }
         catch

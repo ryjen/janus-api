@@ -5,5 +5,5 @@ namespace Janus;
 
 public partial class Account : ModelHandler
 {
-    public Account() : base("Account") { }
+    public Account() : base("Account", readOnly: true) { }
 }

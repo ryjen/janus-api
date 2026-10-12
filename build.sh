@@ -1,23 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
 
-FUNCTIONS="auth account player data"
+command -v dotnet >/dev/null || { echo 'The .NET 10 SDK is required' >&2; exit 1; }
+command -v sam >/dev/null || { echo 'The AWS SAM CLI is required' >&2; exit 1; }
+command -v zip >/dev/null || { echo 'The zip utility is required for the AWS Lambda .NET packager' >&2; exit 1; }
 
-DOTNET_VERSION="net6.0"
+dotnet restore janus.sln
+dotnet build janus.sln --configuration Release --no-restore
+dotnet test tests/janus.tests.csproj --configuration Release --no-restore
 
-#install zip on debian OS, since microsoft/dotnet container doesn't have zip by default
-if [ -f /etc/debian_version ]; then
-	echo "update system"
-	apt -qq update
-	apt -qq -y install zip
-fi
+# The SAM builder packages each project's source as a Lambda zip. It does not
+# consume stale pre-published dist/ directories.
+sam build --template-file template.yaml
+sam validate --template-file template.yaml --region ca-central-1 --lint
 
-echo "Check lambda tools installed"
-dotnet tool install -g Amazon.Lambda.Tools --framework $DOTNET_VERSION 2>/dev/null
-
-echo "Restore project"
-dotnet restore
-
-for func in $FUNCTIONS; do
-	echo "Package $func"
-	dotnet lambda package --configuration Release --framework $DOTNET_VERSION --output-package bin/Release/"$DOTNET_VERSION"/"$func".zip --project-location "$func" || exit
-done
+echo 'SAM Lambda artifacts are under .aws-sam/build/. No deployment was performed.'
