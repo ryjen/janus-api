@@ -25,7 +25,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 
 ## Decisions and trade-offs
 
-**Managed Cognito** delegates passwords, identity lifecycle and token signature verification. The app client explicitly sets `PreventUserExistenceErrors: ENABLED` to avoid the default legacy account-enumeration behavior. Public password recovery uses Cognito `ForgotPassword` and `ConfirmForgotPassword`, not the legacy administrative `NEW_PASSWORD_REQUIRED` challenge route. The original `ReadJwtToken` identity helper was removed because decoding is not verification.
+**Managed Cognito** delegates passwords, identity lifecycle and token signature verification. The app client explicitly sets `PreventUserExistenceErrors: ENABLED` to avoid the default legacy account-enumeration behavior in login and recovery. Cognito's `SignUp` still throws `UsernameExistsException` for duplicate usernames even with this setting; the HTTP handler normalizes that case to the same acknowledgement as a valid signup, although timing/rate/delivery differences remain unverified. Public password recovery uses Cognito `ForgotPassword` and `ConfirmForgotPassword`, not the legacy administrative `NEW_PASSWORD_REQUIRED` challenge route. The original `ReadJwtToken` identity helper was removed because decoding is not verification.
 
 **SQS** decouples authentication from persistence and introduces eventual consistency. Conditional writes support at-least-once delivery; reconciliation of abandoned identities is still needed.
 

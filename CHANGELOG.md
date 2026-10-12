@@ -1,6 +1,6 @@
 # Unreleased
 
-- Explicitly suppress Cognito account-existence errors, and add code-based forgotten-password request/confirmation routes with generic response behavior; retain and correctly describe legacy /reset challenge semantics.
+- Enable Cognito account-existence error protection for login/recovery, normalize duplicate-signup responses, and add code-based forgotten-password request/confirmation routes; retain and correctly describe legacy /reset challenge semantics.
 
 
 - Validate SAM CLI 1.168.0 template with focused W3005 exception for generated API usage-plan dependencies; add SAM validation to CI.
