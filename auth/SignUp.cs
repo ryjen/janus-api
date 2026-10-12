@@ -65,7 +65,7 @@ public partial class Auth
 
         };
 
-        log(string.Format("sending {0} to {1}", message, _sqsUrl));
+        // Do not log account emails, queue URLs, or account payloads.
 
         await _sqs.SendMessageAsync(request);
     }

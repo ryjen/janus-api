@@ -16,10 +16,13 @@ package:
 
 provider:
   name: aws
-  runtime: dotnet6
+  runtime: dotnet10
 
   stage: dev
   region: ca-central-1
+  environment:
+    ACCOUNT_TABLE: !Ref AccountTable
+    PLAYER_TABLE: !Ref PlayerTable
 
   apiGateway:
     apiKeySourceType: HEADER
@@ -38,23 +41,19 @@ provider:
             - dynamodb:DescribeTable
             - dynamodb:DeleteItem
           Resource:
-            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
-            - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Account"
-            - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Player"
+            - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${self:service}-${sls:stage}-Account"
+            - Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${self:service}-${sls:stage}-Player"
         - Effect: Allow
           Action:
             - cognito-idp:AdminInitiateAuth
             - cognito-idp:AdminCreateUser
             - cognito-idp:AdminRespondToAuthChallenge
           Resource:
-            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::GetAtt: ["AccountPool", "Arn"]
         - Effect: Allow
           Action:
-            - sqs:createqueue
             - sqs:sendmessage
           Resource:
-            - Fn::Sub: "arn:aws:iam::${AWS::AccountId}:group/Serverless"
             - Fn::GetAtt: ["JanusQueue", "Arn"]
 
 functions:
@@ -82,7 +81,7 @@ functions:
       QUEUE_URL: !Ref JanusQueue
 
     package:
-      artifact: bin/Release/net6.0/auth.zip
+      artifact: bin/Release/net10.0/auth.zip
 
   account:
     handler: GameplayDataSystem::Janus.Account::Handler
@@ -92,28 +91,43 @@ functions:
           method: post
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /account
           method: put
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /account
           method: get
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /account
           method: delete
           cors: true
           private: true
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - JanusQueue
-              - Arn
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
     package:
-      artifact: bin/Release/net6.0/account.zip
+      artifact: bin/Release/net10.0/account.zip
 
   player:
     handler: GameplayDataSystem::Janus.Player::Handler
@@ -123,56 +137,59 @@ functions:
           method: post
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /player
           method: put
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /player
           method: get
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
       - http:
           path: /player
           method: delete
           cors: true
           private: true
+          authorizer:
+            name: JanusCognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt: [AccountPool, Arn]
     package:
-      artifact: bin/Release/net6.0/player.zip
+      artifact: bin/Release/net10.0/player.zip
 
-  data:
-    handler: GameplayDataSystem::Janus.Data::Handler
+  accountProvision:
+    handler: GameplayDataSystem::Janus.Account::Provision
     events:
-      - http:
-          path: /data
-          method: post
-          cors: true
-          private: true
-      - http:
-          path: /data
-          method: put
-          cors: true
-          private: true
-      - http:
-          path: /data
-          method: get
-          cors: true
-          private: true
-      - http:
-          path: /data
-          method: delete
-          cors: true
-          private: true
+      - sqs:
+          arn:
+            Fn::GetAtt: [JanusQueue, Arn]
     package:
-      artifact: bin/Release/net6.0/data.zip
+      artifact: bin/Release/net10.0/account.zip
 
 resources:
   Resources:
     AccountTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Account
+        TableName: ${self:service}-${sls:stage}-Account
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -186,7 +203,7 @@ resources:
     PlayerTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Player
+        TableName: ${self:service}-${sls:stage}-Player
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -236,24 +253,6 @@ resources:
         ExplicitAuthFlows:
           - "ADMIN_NO_SRP_AUTH"
 
-    AccountPoolAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: CognitoAuthorizer
-        Type: COGNITO_USER_POOLS
-        IdentitySource: method.request.header.Authorization
-        RestApiId:
-          Ref: AccountApiGateway
-        ProviderARNs:
-          - Fn::GetAtt:
-              - AccountPool
-              - Arn
-
-    AccountApiGateway:
-      Type: AWS::ApiGateway::RestApi
-      Properties:
-        Name: janus-api-gateway
-        FailOnWarnings: true
 
 custom:
   local:

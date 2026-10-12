@@ -1,6 +1,5 @@
 
 using Amazon.Lambda.APIGatewayEvents;
-using System.IdentityModel.Tokens.Jwt;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
@@ -43,14 +42,4 @@ public static T ParseForm<T>(this APIGatewayProxyRequest request) where T :
         return JsonDeserialize<Params>(body);
     }
 
-    public static string AuthorizedId(this APIGatewayProxyRequest request)
-    {
-        var auth = request.Headers["Authorization"].Replace("Bearer ", "");
-        var handler = new JwtSecurityTokenHandler();
-        var token = handler.ReadJwtToken(auth);
-
-        Shared.log(token);
-
-        return token.Payload.Sub;
-    }
 }

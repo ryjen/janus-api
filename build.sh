@@ -2,7 +2,7 @@
 
 FUNCTIONS="auth account player data"
 
-DOTNET_VERSION="net6.0"
+DOTNET_VERSION="net10.0"
 
 #install zip on debian OS, since microsoft/dotnet container doesn't have zip by default
 if [ -f /etc/debian_version ]; then
