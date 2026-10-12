@@ -8,9 +8,10 @@
 - [ ] Run an independent secret and sensitive-data scan over **every Git ref, tag, reachable commit, workflow log, release and issue attachment** intended for publication, not just the current checkout.
 - [ ] Create a separate reviewed public source snapshot with a clean new history; exclude private CI, production identifiers, account data, credentials, environment files, and provenance that should stay private.
 - [ ] Select and explicitly approve an open-source license and verify ownership/third-party rights.
-- [x] Replace obsolete Serverless Framework files with an AWS SAM template, per-function IAM and local dotnet publish entrypoints (source committed; runtime and deployment validation still pending).
-- [x] Locally restore/build the .NET 10 candidate; run twelve C# ownership/confirmation-event tests and publish all three Lambda artifact directories using `build.sh` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and seven Python contract tests passed.
-- [ ] Run AWS SAM CLI template/package validation and inspect the expanded CloudFormation auth/IAM/resource wiring. Repeat local tests at the *exact final revision*; review dependencies and SBOM.
+- [x] Replace obsolete Serverless Framework files with an AWS SAM template, per-function IAM and source-based SAM build entrypoints (source committed; runtime and deployment validation still pending).
+- [x] Locally restore/build the .NET 10 candidate; run nineteen C# ownership/confirmation-event/recovery tests and package all Lambda functions with `sam build` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and nine Python contract tests passed.
+- [x] Validate the source SAM template with AWS SAM CLI 1.168.0 and package all Lambda functions locally with `sam build` (restricted host used a validation-only zip compatibility utility).
+- [ ] Validate the expanded CloudFormation auth/IAM/resource wiring against disposable AWS; repeat local and portable CI tests at the *exact publication revision*; review dependencies and SBOM.
 - [ ] Obtain independent review of build output, tests, SAM template and security assumptions.
 - [x] Replace the source-level administrative self-enrollment path with Cognito self-signup, email confirmation, and trusted PostConfirmation provisioning (not yet verified in AWS).
 - [x] Add a subject-scoped, verified-email-only account reconciliation request for confirmed users whose SQS enqueue failed (source-level repair, not AWS-verified).

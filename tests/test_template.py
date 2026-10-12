@@ -74,6 +74,20 @@ class TemplateContractTests(unittest.TestCase):
                 self.assertNotEqual(auth.get("Authorizer"), "NONE")
                 self.assertEqual(auth.get("ApiKeyRequired", True), True)
 
+    def test_lambda_codeuri_are_source_projects_for_sam_build(self):
+        sources = {
+            "AccountConfirmedFunction": "auth/",
+            "AuthFunction": "auth/",
+            "AccountFunction": "account/",
+            "AccountRecoveryFunction": "account/",
+            "AccountProvisionFunction": "account/",
+            "PlayerFunction": "player/",
+        }
+        actual = {name: value["Properties"]["CodeUri"]
+                  for name, value in self.resources.items()
+                  if value.get("Type") == "AWS::Serverless::Function"}
+        self.assertEqual(actual, sources)
+
     def test_no_public_generic_data_function(self):
         self.assertFalse(any(path == "/data" for _,_,_,path,_ in self.routes))
         self.assertNotIn("DataFunction", self.resources)
