@@ -20,17 +20,17 @@ flowchart LR
     Player --> PlayerDB[(DynamoDB Player)]
 ```
 
-Signup creates a Cognito user and enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
+Signup uses Cognito self-enrollment, followed by email-code confirmation at `POST /confirm`. **Only the trusted Cognito PostConfirmation trigger** enqueues an account provision event. SQS delivers at least once; a conditional DynamoDB put preserves a previously created account. Record endpoints accept only the Cognito subject's data, checked in the Lambda and restricted by the API Gateway authorizer.
 
 ## Auth and API surface
 
 | Route | Methods | Access |
 | --- | --- | --- |
-| `/signup`, `/authenticate`, `/reset` | POST | Usage-plan API key; Cognito identity actions |
+| `/signup`, `/confirm`, `/authenticate`, `/reset` | POST | Usage-plan API key; Cognito identity actions |
 | `/account` | GET | Usage-plan API key + Cognito ID token |
 | `/player` | GET, POST, PUT, DELETE | Usage-plan API key + Cognito ID token |
 
-For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. API Gateway is configured with a Cognito default authorizer; the three auth flows explicitly opt out while retaining their API-key requirement.
+For authorized requests, use `Authorization: <Cognito ID token>` and `X-Api-Key: <API Gateway usage-plan key>`. The key is **not identity authentication**. API Gateway is configured with a Cognito default authorizer; the four auth flows explicitly opt out while retaining their API-key requirement.
 
 The generic `/data` endpoint is **not registered**. Account HTTP mutation is disabled. An optional record `id` may be supplied only if it matches the authenticated `sub`; the effective record key always comes from verified authorizer claims.
 
@@ -60,6 +60,6 @@ For IAM, SAM creates separate execution roles for authentication, HTTP data acce
 - [Publication and history gate](docs/publication-gate.md)
 - [Changelog](CHANGELOG.md)
 
-**Publication blocker:** the existing `/signup` path is an administrative prototype that has not established email ownership before provisioning. See [security issue #9](https://github.com/ryjen/janus-api/issues/9). Do not treat its account creation flow as a secure public registration design.
+**Enrollment design:** self-signup, email-code confirmation, and a Cognito PostConfirmation trigger are now implemented. The end-to-end behaviour is **not independently tested in AWS**; see [security issue #9](https://github.com/ryjen/janus-api/issues/9).
 
 **Public status:** still private pending clean-history and credential-revocation review. This reference has not been licensed for third-party reuse.

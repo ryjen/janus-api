@@ -1,7 +1,7 @@
 # Unreleased
 
 - Validate SAM CLI 1.168.0 template with focused W3005 exception for generated API usage-plan dependencies; add SAM validation to CI.
-- Document unresolved email ownership verification in prototype account enrollment and block publication until addressed.
+- Replace unverified administrative self-enrollment with Cognito email-confirmed signup and a PostConfirmation SQS provisioning trigger; cloud integration remains blocked.
 
 - Move to the .NET 10 managed AWS Lambda runtime.
 - Replace unsupported Serverless Framework tooling with AWS SAM; separate per-function IAM, API key usage plan, resource names, DLQ and PITR for DynamoDB.
