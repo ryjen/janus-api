@@ -4,7 +4,7 @@ Janus is a historical serverless backend prototype, now being prepared as a read
 
 ## Control plane
 
-AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito as the default authorizer**, a usage plan / API key, three identity/data Lambdas, a dedicated SQS consumer, two DynamoDB tables, and a dead-letter queue. Resources are stack-scoped; no pre-existing production table or identity migration is implied.
+AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito as the default authorizer**, a usage plan / API key, three HTTP identity/data Lambdas, a separate PostConfirmation Lambda, a dedicated SQS consumer, two DynamoDB tables, and a dead-letter queue. Resources are stack-scoped; no pre-existing production table or identity migration is implied.
 
 ## Request boundary
 
@@ -37,7 +37,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 
 ## Outstanding verification
 
-- Build + unit tests on .NET 10, pinned dependency updates and C# static analysis.
+- .NET 10 release build and twelve unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
 - API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.

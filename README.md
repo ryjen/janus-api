@@ -13,7 +13,8 @@ flowchart LR
     API --> Account[Account GET Lambda]
     API --> Player[Player CRUD Lambda]
     Auth --> Cognito[Cognito user pool]
-    Auth --> Queue[SQS]
+    Cognito --> Confirmed[PostConfirmation Lambda]
+    Confirmed --> Queue[SQS]
     Queue --> Provision[Provision Lambda]
     Provision --> AccountDB[(DynamoDB Account)]
     Account --> AccountDB
@@ -45,7 +46,7 @@ sam validate --template-file template.yaml --region ca-central-1 --lint
 
 `build.sh` runs restore, build, tests, and produces three Lambda publish directories under `dist/`. The SAM template points at those artifacts; validation and deployment are separate operations.
 
-**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran six C# unit tests, and published all three Lambda artifact directories on a temporary Linux environment. Separately, `cfn-lint` and six infrastructure contract tests passed. **AWS SAM CLI 1.168.0 validates the template locally (including `--lint` with a documented W3005 exception for generated usage-plan dependencies). SAM packaging/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
+**Local validation:** .NET SDK 10.0.100 successfully restored and built the solution, ran twelve C# unit tests, and published all three Lambda artifact directories on a temporary Linux environment. Separately, `cfn-lint` and seven infrastructure contract tests passed. **AWS SAM CLI 1.168.0 validates the template locally (including `--lint` with a documented W3005 exception for generated usage-plan dependencies). SAM packaging/deployment, cloud-side Cognito/SQS integration, and hosted CI have not been validated.** See [issue #7](https://github.com/ryjen/janus-api/issues/7).
 
 ## Sandbox deployment (manual, after verification)
 

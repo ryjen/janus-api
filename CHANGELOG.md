@@ -11,7 +11,7 @@
 - Split account SQS provisioning from HTTP routing; conditionally insert account records to survive duplicate delivery.
 - Namespace AWS table, user-pool and queue resources by stage; add SQS dead-letter queue.
 - Remove unvalidated JWT identity helper and personal-data message logging.
-- Add access-policy tests, architecture notes, and a publication gate.
+- Add access-policy and confirmed-enrollment tests, architecture notes, and a publication gate.
 
 # v0.1.0
 

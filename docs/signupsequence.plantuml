@@ -1,32 +1,46 @@
 @startuml
-title Janus — signup and eventual account provisioning
+title Janus — email-confirmed signup and asynchronous account creation
 actor Client
 participant "API Gateway" as Gateway
 participant "Auth Lambda" as Auth
 participant "Amazon Cognito" as Cognito
+participant "PostConfirmation Lambda" as Confirmed
 queue "SQS account queue" as Queue
 participant "Provision Lambda" as Provision
 participant "Account HTTP Lambda" as AccountRead
 database "Account DynamoDB" as DB
-Client -> Gateway: POST /signup (usage-plan API key)
-Gateway -> Auth: Invoke
-Auth -> Cognito: AdminCreateUser
-Cognito --> Auth: User sub
-Auth -> Queue: Send account-created event
-Auth --> Gateway: Identity accepted
-Gateway --> Client: Response
-Queue -> Provision: Deliver event (at least once)
-Provision -> DB: Conditional PutItem\nattribute_not_exists(id)
-DB --> Provision: Inserted or already exists
-note over Auth, DB
-Cognito create and SQS enqueue are not atomic.
-Missing event / poison message recovery remains a gap.
+
+Client -> Gateway: POST /signup (API key)
+Gateway -> Auth: invoke
+Auth -> Cognito: SignUp (email and password)
+Cognito --> Client: Email confirmation code (via Cognito)
+Auth --> Gateway: Confirmation required
+Gateway --> Client: Confirmation pending
+
+Client -> Gateway: POST /confirm (email and code, API key)
+Gateway -> Auth: invoke
+Auth -> Cognito: ConfirmSignUp (email and code)
+Cognito -> Confirmed: PostConfirmation_ConfirmSignUp\nverified userAttributes
+Confirmed -> Queue: Send account event (sub + email)
+Confirmed --> Cognito: Return event
+Cognito --> Auth: Confirmation complete
+Auth --> Gateway: Success
+Gateway --> Client: Confirmation complete
+
+Queue -> Provision: Deliver (at least once)
+Provision -> DB: PutItem if id does not exist
+DB --> Provision: Created or already exists
+
+note over Cognito, DB
+Confirm and queue enqueue are not atomic.
+Failure recovery and DLQ reconciliation require AWS integration tests.
 end note
+
 Client -> Gateway: GET /account (API key + ID token)
-Gateway -> Gateway: Validate ID token using Cognito authorizer
-Gateway -> AccountRead: Verified claims (sub)
+Gateway -> Gateway: Cognito authorizer verifies token
+Gateway -> AccountRead: Claims with verified sub
 AccountRead -> DB: GetItem(id = sub)
-DB --> AccountRead: Account record
+DB --> AccountRead: Account
 AccountRead --> Gateway: Response
-Gateway --> Client: Account record
+Gateway --> Client: Account
 @enduml

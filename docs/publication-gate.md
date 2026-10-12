@@ -9,13 +9,14 @@
 - [ ] Create a separate reviewed public source snapshot with a clean new history; exclude private CI, production identifiers, account data, credentials, environment files, and provenance that should stay private.
 - [ ] Select and explicitly approve an open-source license and verify ownership/third-party rights.
 - [x] Replace obsolete Serverless Framework files with an AWS SAM template, per-function IAM and local dotnet publish entrypoints (source committed; runtime and deployment validation still pending).
-- [x] Locally restore/build the .NET 10 candidate; run six C# ownership tests and publish all three Lambda artifact directories using `build.sh` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and six Python contract tests passed.
+- [x] Locally restore/build the .NET 10 candidate; run twelve C# ownership/confirmation-event tests and publish all three Lambda artifact directories using `build.sh` (SDK 10.0.100, isolated Linux). Infrastructure checks: `cfn-lint` and seven Python contract tests passed.
 - [ ] Run AWS SAM CLI template/package validation and inspect the expanded CloudFormation auth/IAM/resource wiring. Repeat local tests at the *exact final revision*; review dependencies and SBOM.
 - [ ] Obtain independent review of build output, tests, SAM template and security assumptions.
 - [x] Replace the source-level administrative self-enrollment path with Cognito self-signup, email confirmation, and trusted PostConfirmation provisioning (not yet verified in AWS).
 - [ ] Verify the full Cognito confirmation → Lambda → SQS → DynamoDB flow, including permissions, retries and orphan recovery; see [security issue #9](https://github.com/ryjen/janus-api/issues/9).
 - [ ] Exercise protected routes with missing, invalid and cross-user auth; test Cognito signup/challenge, SQS retry and DLQ handling in disposable AWS infrastructure.
-- [ ] Reconcile README diagrams, supported API claims, CI, and current limitations with the exact publication candidate.
+- [x] Reconcile README and source diagrams with email-confirmed Cognito enrollment and the PostConfirmation SQS path at the source level.
+- [ ] Reconcile public capability claims against an independently verified AWS integration candidate.
 - [ ] Get an independent security/publication review before changing visibility. No production deploy is implied by publication.
 
 ## Intentionally deferred
