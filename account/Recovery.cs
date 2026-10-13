@@ -27,7 +27,8 @@ public sealed class AccountRecovery
 
         try
         {
-            return await _recovery.RecoverAsync(claims) switch
+            var outcome = await _recovery.RecoverAsync(claims);
+            return outcome switch
             {
                 AccountRecoveryOutcome.Unverified =>
                     Response(Forbidden, new { Message = "Verified email required" }),
