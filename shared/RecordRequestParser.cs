@@ -77,6 +77,19 @@ public static class RecordRequestParser
         return true;
     }
 
+    // Schema application is opt-in; strict parsing runs first so duplicate
+    // keys, malformed Unicode and size/depth violations cannot be normalized.
+    public static bool TryParseMutation(string? body, RecordParsingLimits limits,
+        RecordFieldSchema schema, out RecordMutationRequest? request)
+    {
+        request = null;
+        ArgumentNullException.ThrowIfNull(schema);
+        if (!TryParseMutation(body, limits, out var parsed)) return false;
+        if (!schema.Matches(body!)) return false;
+        request = parsed;
+        return true;
+    }
+
     // Retained for compatibility with existing callers and tests.
     public static bool TryParseFields(string? body, out Dictionary<string, object>? fields)
     {
