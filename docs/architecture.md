@@ -16,9 +16,12 @@ separate SQS event adapter (no longer a method on the account query handler).
 `IAccountPublisher` and `IAccountStore` keep these application decisions
 independent of SQS and DynamoDB. Infrastructure remains in the existing shared
 project until the historical auth/account duplicate assembly names can be
-migrated without breaking deployed handler names. Publishing and store errors
-propagate for SQS retry or return 503 on HTTP; only the trusted confirmation
-trigger initiates new-account provisioning.
+migrated without breaking deployed handler names. The Cognito confirmation callback propagates publisher failures rather than
+acknowledging success, but this does **not** establish Cognito retry guarantees.
+A confirmed user can request reconciliation if enqueue fails. SQS consumer
+failures propagate for queue redelivery/DLQ handling; HTTP recovery dependency
+failures return 503. Only the trusted confirmation trigger initiates
+new-account provisioning.
 
 ## Request boundary
 
@@ -51,7 +54,7 @@ trigger initiates new-account provisioning.
 
 ## Outstanding verification
 
-- .NET 10 release build and nineteen unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
+- On this candidate, .NET 10 release build and **68 C# unit/adapter tests** passed locally; **11 SAM source-contract tests**, direct CloudFormation lint and SAM template validation passed. .NET auth/account/player publish succeeded. Latest-head SAM ZIP packaging and portable hosted CI have not passed, and dependency review and C# static analysis remain open.
 - API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests, non-enumerating password recovery, expired or incorrect reset codes and rate limits.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
