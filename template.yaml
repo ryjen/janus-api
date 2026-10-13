@@ -305,7 +305,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: account/
-      Handler: GameplayDataSystem::Janus.Account::Provision
+      Handler: GameplayDataSystem::Janus.AccountProvisioner::Handler
       Environment:
         Variables:
           ACCOUNT_TABLE: !Ref AccountTable

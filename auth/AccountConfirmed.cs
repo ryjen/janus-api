@@ -1,30 +1,24 @@
-using Amazon.SQS;
-using Amazon.SQS.Model;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Janus;
 
+// Cognito event adapter: only the verified trigger may publish an account.
+// Dependency is injectable without AWS infrastructure in the test process.
 public sealed class AccountConfirmed
 {
-    private readonly IAmazonSQS _sqs = new AmazonSQSClient();
+    private readonly IAccountPublisher _publisher;
+
+    public AccountConfirmed() : this(new SqsAccountPublisher()) { }
+
+    public AccountConfirmed(IAccountPublisher publisher) =>
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
 
     public async Task<JObject> Handler(JObject cognitoEvent, ILambdaContext context)
     {
         var account = VerifiedEnrollment.FromCognitoEvent(cognitoEvent);
-        if (account is null)
-            return cognitoEvent; // For example, a password-reset confirmation event.
+        if (account is not null)
+            await _publisher.PublishAsync(account);
 
-        var url = Environment.GetEnvironmentVariable("QUEUE_URL");
-        if (string.IsNullOrWhiteSpace(url))
-            throw new InvalidOperationException("Queue not configured");
-
-        await _sqs.SendMessageAsync(new SendMessageRequest
-        {
-            QueueUrl = url,
-            MessageBody = JsonConvert.SerializeObject(account)
-        });
-
-        return cognitoEvent; // Cognito requires the original event in the response.
+        return cognitoEvent; // Required by Cognito PostConfirmation protocol.
     }
 }

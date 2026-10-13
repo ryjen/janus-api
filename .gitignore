@@ -249,3 +249,8 @@ _Pvt_Extensions
 # Lambda publish output and AWS SAM build artifacts
 dist/
 .aws-sam/
+
+# Local Python validation environments
+.venv/
+.sam-venv/
+.lint-venv/

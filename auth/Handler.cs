@@ -1,4 +1,4 @@
-
+#nullable enable
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
 using static System.Net.HttpStatusCode;
@@ -12,10 +12,30 @@ using static Shared;
 public partial class Auth
 {
 
-    private readonly AmazonCognitoIdentityProviderClient _cognitoClient = new AmazonCognitoIdentityProviderClient();
+    // Parameterless Lambda composition root; injected client is used in tests.
+    private readonly IAmazonCognitoIdentityProvider _cognitoClient;
 
-    private readonly string _userPoolId = Environment.GetEnvironmentVariable("USER_POOL_ID");
-    private readonly string _clientId = Environment.GetEnvironmentVariable("CLIENT_ID");
+    private readonly string _userPoolId;
+    private readonly string _clientId;
+
+    public Auth() : this(
+        new AmazonCognitoIdentityProviderClient(),
+        Environment.GetEnvironmentVariable("USER_POOL_ID"),
+        Environment.GetEnvironmentVariable("CLIENT_ID")) { }
+
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient)
+        : this(cognitoClient,
+            Environment.GetEnvironmentVariable("USER_POOL_ID"),
+            Environment.GetEnvironmentVariable("CLIENT_ID")) { }
+
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId, string? clientId)
+    {
+        _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
+        _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
+            throw new ArgumentException("User pool configuration required", nameof(userPoolId));
+        _clientId = !string.IsNullOrWhiteSpace(clientId) ? clientId :
+            throw new ArgumentException("Client configuration required", nameof(clientId));
+    }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {

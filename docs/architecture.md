@@ -6,6 +6,23 @@ Janus is a historical serverless backend prototype, now being prepared as a read
 
 AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito as the default authorizer**, a usage plan / API key, three HTTP identity/data Lambdas, a separate PostConfirmation Lambda, a dedicated SQS consumer, two DynamoDB tables, and a dead-letter queue. Resources are stack-scoped; no pre-existing production table or identity migration is implied.
 
+## Account lifecycle dependency boundaries
+
+The auth, account recovery and provisioning Lambda entry points retain parameterless
+constructors for AWS activation but also accept injected interfaces in tests.
+`AccountConfirmed` is a Cognito event adapter, `AccountRecoveryService`
+controls verified-account reconciliation, and `AccountProvisioner` is a
+separate SQS event adapter (no longer a method on the account query handler).
+`IAccountPublisher` and `IAccountStore` keep these application decisions
+independent of SQS and DynamoDB. Infrastructure remains in the existing shared
+project until the historical auth/account duplicate assembly names can be
+migrated without breaking deployed handler names. The Cognito confirmation callback propagates publisher failures rather than
+acknowledging success, but this does **not** establish Cognito retry guarantees.
+A confirmed user can request reconciliation if enqueue fails. SQS consumer
+failures propagate for queue redelivery/DLQ handling; HTTP recovery dependency
+failures return 503. Only the trusted confirmation trigger initiates
+new-account provisioning.
+
 ## Request boundary
 
 1. `POST /signup` calls Cognito self-enrollment; `POST /confirm` verifies the email code. Cognito invokes a PostConfirmation Lambda which publishes the account event to SQS. These external auth flows intentionally opt out of the user authorizer but remain API-key protected.
@@ -37,7 +54,7 @@ AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito a
 
 ## Outstanding verification
 
-- .NET 10 release build and nineteen unit tests passed locally; still require portable CI, dependency review, and sustained C# static analysis.
+- On this candidate, .NET 10 release build and **68 C# unit/adapter tests** passed locally; **11 SAM source-contract tests**, direct CloudFormation lint and SAM template validation passed. .NET auth/account/player publish succeeded. Latest-head SAM ZIP packaging and portable hosted CI have not passed, and dependency review and C# static analysis remain open.
 - API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests, non-enumerating password recovery, expired or incorrect reset codes and rate limits.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
