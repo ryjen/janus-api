@@ -6,6 +6,20 @@ Janus is a historical serverless backend prototype, now being prepared as a read
 
 AWS SAM `template.yaml` defines a Cognito user pool, a REST API with **Cognito as the default authorizer**, a usage plan / API key, three HTTP identity/data Lambdas, a separate PostConfirmation Lambda, a dedicated SQS consumer, two DynamoDB tables, and a dead-letter queue. Resources are stack-scoped; no pre-existing production table or identity migration is implied.
 
+## Account lifecycle dependency boundaries
+
+The auth, account recovery and provisioning Lambda entry points retain parameterless
+constructors for AWS activation but also accept injected interfaces in tests.
+`AccountConfirmed` is a Cognito event adapter, `AccountRecoveryService`
+controls verified-account reconciliation, and `AccountProvisioner` is a
+separate SQS event adapter (no longer a method on the account query handler).
+`IAccountPublisher` and `IAccountStore` keep these application decisions
+independent of SQS and DynamoDB. Infrastructure remains in the existing shared
+project until the historical auth/account duplicate assembly names can be
+migrated without breaking deployed handler names. Publishing and store errors
+propagate for SQS retry or return 503 on HTTP; only the trusted confirmation
+trigger initiates new-account provisioning.
+
 ## Request boundary
 
 1. `POST /signup` calls Cognito self-enrollment; `POST /confirm` verifies the email code. Cognito invokes a PostConfirmation Lambda which publishes the account event to SQS. These external auth flows intentionally opt out of the user authorizer but remain API-key protected.

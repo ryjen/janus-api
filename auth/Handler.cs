@@ -12,7 +12,13 @@ using static Shared;
 public partial class Auth
 {
 
-    private readonly AmazonCognitoIdentityProviderClient _cognitoClient = new AmazonCognitoIdentityProviderClient();
+    // Parameterless Lambda composition root; injected client is used in tests.
+    private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+
+    public Auth() : this(new AmazonCognitoIdentityProviderClient()) { }
+
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient) =>
+        _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
 
     private readonly string _userPoolId = Environment.GetEnvironmentVariable("USER_POOL_ID");
     private readonly string _clientId = Environment.GetEnvironmentVariable("CLIENT_ID");

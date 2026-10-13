@@ -1,27 +1,27 @@
 using Amazon.Lambda.SQSEvents;
 using Newtonsoft.Json;
+using AccountModel = Janus.Model.Account;
 
 namespace Janus;
 
-using AccountModel = Janus.Model.Account;
-
-public partial class Account
+// Separate queue entry point; the account HTTP query handler cannot interpret
+// SQS events. Invalid messages and store faults throw, allowing retry/DLQ.
+public sealed class AccountProvisioner
 {
-    // Dedicated SQS handler: an API Gateway proxy request cannot deserialize SQS records.
-    public async Task Provision(SQSEvent sqs, ILambdaContext context)
-    {
-        var table = Environment.GetEnvironmentVariable("ACCOUNT_TABLE")
-            ?? throw new InvalidOperationException("ACCOUNT_TABLE is not configured");
-        var db = new Database();
+    private readonly AccountProvisioningService _provisioning;
 
+    public AccountProvisioner()
+        : this(new AccountProvisioningService(new DynamoAccountStore())) { }
+
+    public AccountProvisioner(AccountProvisioningService provisioning) =>
+        _provisioning = provisioning ?? throw new ArgumentNullException(nameof(provisioning));
+
+    public async Task Handler(SQSEvent sqs, ILambdaContext context)
+    {
         foreach (var record in sqs.Records)
         {
-            var account = JsonConvert.DeserializeObject<AccountModel>(record.Body)
-                ?? throw new InvalidOperationException("Invalid account creation message");
-            if (string.IsNullOrWhiteSpace(account.Id) || string.IsNullOrWhiteSpace(account.Email))
-                throw new InvalidOperationException("Incomplete account creation message");
-
-            await db.CreateIfAbsent(new CreateRequest { Entity = table, Data = account }, account.Id);
+            var account = JsonConvert.DeserializeObject<AccountModel>(record.Body);
+            await _provisioning.ProvisionAsync(account);
         }
     }
 }
