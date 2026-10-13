@@ -108,4 +108,46 @@ public sealed class CognitoAuthAdapterTests
         Assert.Throws<ArgumentException>(() => new Auth(fake, "", "test-client"));
         Assert.Throws<ArgumentException>(() => new Auth(fake, "test-pool", null));
     }
+
+    [Fact]
+    public async Task SignupRejectsNonStringCredentialsWithoutCognitoCall()
+    {
+        var fake = new FakeCognito();
+        var input = new Dictionary<string, object>
+        {
+            ["email"] = 123,
+            ["password"] = "safe-test-password"
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(input);
+        Assert.Equal(400, response.StatusCode);
+        Assert.Null(fake.SignedUp);
+    }
+
+    [Fact]
+    public async Task SignupPreservesSignificantPasswordWhitespace()
+    {
+        var fake = new FakeCognito();
+        var input = new Dictionary<string, object>
+        {
+            ["email"] = " owner@example.invalid ",
+            ["password"] = " leading-and-trailing "
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(input);
+        Assert.Equal(200, response.StatusCode);
+        Assert.Equal(" leading-and-trailing ", fake.SignedUp!.Password);
+        Assert.Equal("owner@example.invalid", fake.SignedUp.Username);
+    }
+
+    [Fact]
+    public async Task ConfirmationRejectsNonStringCodeWithoutCognitoCall()
+    {
+        var fake = new FakeCognito();
+        var input = new Dictionary<string, object>
+        {
+            ["email"] = "owner@example.invalid",
+            ["code"] = 123456
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").ConfirmSignUp(input);
+        Assert.Equal(400, response.StatusCode);
+    }
 }
