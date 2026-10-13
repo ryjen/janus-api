@@ -42,4 +42,26 @@ public sealed class StrictRecordParsingTests
     {
         Assert.True(RecordRequestParser.TryParseMutation("{\"rank\":1,\"rank\":2}", out _));
     }
+
+    [Theory]
+    [InlineData("{\"id\":1,\"\\u0069d\":2}")]
+    [InlineData("{\"outer\":{\"a\":1,\"\\u0061\":2}}")]
+    public void RejectsEquivalentEscapedPropertyNames(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
+
+    [Fact]
+    public void UsesOrdinalPropertyNamesRatherThanCaseFolding()
+    {
+        Assert.True(RecordRequestParser.TryParseMutation("{\"level\":1,\"Level\":2}", Limits, out _));
+    }
+
+    [Theory]
+    [InlineData("{\"rank\":1} {\"rank\":2}")]
+    [InlineData("{\"rank\":1} trailing")]
+    public void RejectsTrailingContent(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
 }
