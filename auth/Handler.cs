@@ -1,4 +1,4 @@
-
+#nullable enable
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.CognitoIdentityProvider;
 using static System.Net.HttpStatusCode;
