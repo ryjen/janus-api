@@ -48,6 +48,13 @@ public sealed class SubjectRecordService
             : new RecordResult(RecordStatus.Ok, json);
     }
 
+    // Typed application boundary; retain dictionary overload for existing callers.
+    public Task<RecordResult> UpsertAsync(string? subject, RecordMutationRequest request) =>
+        UpsertAsync(subject, request?.Fields ?? throw new ArgumentNullException(nameof(request)));
+
+    public Task<RecordResult> DeleteAsync(string? subject, RecordMutationRequest request) =>
+        DeleteAsync(subject, request?.Fields ?? throw new ArgumentNullException(nameof(request)));
+
     public async Task<RecordResult> UpsertAsync(string? subject, IReadOnlyDictionary<string, object> fields)
     {
         if (string.IsNullOrWhiteSpace(subject)) return new RecordResult(RecordStatus.Unauthorized);

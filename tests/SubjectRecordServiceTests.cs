@@ -152,4 +152,28 @@ public sealed class SubjectRecordServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => new SubjectRecordService(store).ReadAsync("owner", null));
     }
+
+    [Fact]
+    public async Task TypedUpsertEnforcesSubjectAndRemovesId()
+    {
+        var store = new FakeStore();
+        var fields = new Dictionary<string, object> { ["id"] = "owner", ["level"] = 7 };
+        var result = await new SubjectRecordService(store).UpsertAsync(
+            "owner", new RecordMutationRequest(fields));
+        Assert.Equal(RecordStatus.Ok, result.Status);
+        Assert.Equal("owner", store.LastId);
+        Assert.Equal(7, store.LastFields!["level"]);
+        Assert.False(store.LastFields.ContainsKey("id"));
+        Assert.True(fields.ContainsKey("id"));
+    }
+
+    [Fact]
+    public async Task TypedDeleteRejectsCrossSubjectWithoutPersistence()
+    {
+        var store = new FakeStore();
+        var result = await new SubjectRecordService(store).DeleteAsync(
+            "owner", new RecordMutationRequest(new Dictionary<string, object> { ["id"] = "another" }));
+        Assert.Equal(RecordStatus.Forbidden, result.Status);
+        Assert.Equal(0, store.Calls);
+    }
 }
