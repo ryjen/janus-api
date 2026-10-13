@@ -78,7 +78,7 @@ public sealed class SubjectRecordService
     private static RecordStatus Authorize(string? subject, string? requestedId)
     {
         if (string.IsNullOrWhiteSpace(subject)) return RecordStatus.Unauthorized;
-        return AccessPolicy.MatchesSubject(subject, requestedId)
+        return requestedId is null || string.Equals(subject, requestedId, StringComparison.Ordinal)
             ? RecordStatus.Ok : RecordStatus.Forbidden;
     }
 
@@ -86,6 +86,6 @@ public sealed class SubjectRecordService
     {
         if (!fields.TryGetValue("id", out var value)) return true;
         // Explicit null / numeric / structured IDs must not be coerced into a key.
-        return value is string requestedId && AccessPolicy.MatchesSubject(subject, requestedId);
+        return value is string requestedId && string.Equals(subject, requestedId, StringComparison.Ordinal);
     }
 }

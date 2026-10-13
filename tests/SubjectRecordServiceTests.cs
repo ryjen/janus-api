@@ -66,6 +66,8 @@ public sealed class SubjectRecordServiceTests
     [InlineData(null, null, RecordStatus.Unauthorized)]
     [InlineData("", null, RecordStatus.Unauthorized)]
     [InlineData("owner", "another", RecordStatus.Forbidden)]
+    [InlineData("owner", "", RecordStatus.Forbidden)]
+    [InlineData("owner", "  ", RecordStatus.Forbidden)]
     [InlineData("owner", "OWNER", RecordStatus.Forbidden)]
     public async Task UnauthorizedReadsNeverTouchStore(string? subject, string? requestedId, RecordStatus expected)
     {
@@ -91,14 +93,14 @@ public sealed class SubjectRecordServiceTests
     [Theory]
     [InlineData("stranger")]
     [InlineData("")]
+    [InlineData(" ")]
     public async Task ContradictoryWriteIdsNeverReachStore(string requestedId)
     {
         var store = new FakeStore();
         var result = await new SubjectRecordService(store).UpsertAsync(
             "owner", new Dictionary<string, object> { ["id"] = requestedId });
-        if (requestedId == "") Assert.Equal(RecordStatus.Ok, result.Status);
-        else Assert.Equal(RecordStatus.Forbidden, result.Status);
-        Assert.Equal(requestedId == "" ? 1 : 0, store.Calls);
+        Assert.Equal(RecordStatus.Forbidden, result.Status);
+        Assert.Equal(0, store.Calls);
     }
 
     [Fact]
