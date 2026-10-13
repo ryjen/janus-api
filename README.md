@@ -63,6 +63,7 @@ For IAM, SAM creates separate execution roles for authentication, HTTP data acce
 ## Project material
 
 - [Architecture and trust boundaries](docs/architecture.md)
+- [Record application boundaries and follow-up design](docs/record-boundary.md)
 - [Security limitations and reporting](SECURITY.md)
 - [Publication and history gate](docs/publication-gate.md)
 - [Changelog](CHANGELOG.md)
