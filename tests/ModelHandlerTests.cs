@@ -16,6 +16,7 @@ public sealed class ModelHandlerTests
         public bool Fail { get; set; }
         public bool FailWithArgumentException { get; set; }
         public string? Json { get; set; }
+        public IReadOnlyDictionary<string, object>? LastFields { get; private set; }
 
         public Task<string?> ReadJsonAsync(string subject)
         {
@@ -28,6 +29,7 @@ public sealed class ModelHandlerTests
         public Task UpsertAsync(string subject, IReadOnlyDictionary<string, object> fields)
         {
             Calls++;
+            LastFields = fields;
             if (Fail) throw new InvalidOperationException("Simulated outage");
             if (FailWithArgumentException) throw new ArgumentException("Simulated storage argument error");
             return Task.CompletedTask;
@@ -142,5 +144,49 @@ public sealed class ModelHandlerTests
             Request("POST", body: "{bad"), null!);
         Assert.Equal(405, response.StatusCode);
         Assert.Equal(0, store.Calls);
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("PUT")]
+    public async Task LegacyPostAndPutBothUpsertAndReturnExistingResponse(string method)
+    {
+        var store = new FakeStore();
+        var response = await new TestHandler(store).Handler(
+            Request(method, body: "{\\"rank\\":4}"), null!);
+        Assert.Equal(200, response.StatusCode);
+        Assert.Contains("Player updated", response.Body);
+        Assert.Equal(1, store.Calls);
+        Assert.NotNull(store.LastFields);
+        Assert.True(store.LastFields.ContainsKey("rank"));
+    }
+
+    [Theory]
+    [InlineData("POST", null)]
+    [InlineData("PUT", "")]
+    [InlineData("DELETE", "  ")]
+    public async Task EmptyMutationBodiesFailBeforeStore(string method, string? body)
+    {
+        var store = new FakeStore();
+        var response = await new TestHandler(store).Handler(Request(method, body: body), null!);
+        Assert.Equal(400, response.StatusCode);
+        Assert.Equal(0, store.Calls);
+    }
+
+    [Fact]
+    public async Task UnknownMethodRejectsWithoutStore()
+    {
+        var store = new FakeStore();
+        var response = await new TestHandler(store).Handler(Request("PATCH"), null!);
+        Assert.Equal(405, response.StatusCode);
+        Assert.Equal(0, store.Calls);
+    }
+
+    [Fact]
+    public void ParserDoesNotAcceptNullOrMalformedJson()
+    {
+        Assert.False(RecordRequestParser.TryParseFields(null, out _));
+        Assert.False(RecordRequestParser.TryParseFields("null", out _));
+        Assert.False(RecordRequestParser.TryParseFields("{bad", out _));
     }
 }
