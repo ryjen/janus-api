@@ -41,20 +41,27 @@ public partial class Auth
     {
         try
         {
+            if (request.Path is not ("/authenticate" or "/reset" or "/signup" or "/confirm" or
+                "/password/forgot" or "/password/confirm"))
+                return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
+
+            if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
+                return Response(BadRequest, new { Message = "Invalid JSON object" });
+
             switch (request.Path)
             {
             case "/authenticate":
-                return await Authenticate(request.Body.ToParams());
+                return await Authenticate(parameters!);
             case "/reset":
-                return await NewPassword(request.Body.ToParams());
+                return await NewPassword(parameters!);
             case "/signup":
-                return await SignUp(request.Body.ToParams());
+                return await SignUp(parameters!);
             case "/confirm":
-                return await ConfirmSignUp(request.Body.ToParams());
+                return await ConfirmSignUp(parameters!);
             case "/password/forgot":
-                return await StartPasswordRecovery(request.Body.ToParams());
+                return await StartPasswordRecovery(parameters!);
             case "/password/confirm":
-                return await ConfirmPasswordRecovery(request.Body.ToParams());
+                return await ConfirmPasswordRecovery(parameters!);
             default:
                 return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
             }
