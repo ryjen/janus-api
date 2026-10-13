@@ -1,8 +1,14 @@
 # Public portfolio publication gate
 
-**Do not change this repository to public by toggling visibility.** The private repository retains historical commits and other artifacts that have not been verified safe for publication.
+**Current state (October 12, 2026): this repository has already been changed to public without completing this gate.** Public visibility exposes existing Git history as well as the latest branch. This checklist is now an **urgent post-exposure remediation gate**, not merely a pre-publication plan. Historical credential exposure must be treated as potentially compromised until provider-side revocation is confirmed. Making a repository private again or deleting a file is not sufficient credential remediation, since public copies may persist. Do not claim a clean public release or deploy the service until remaining gates are independently satisfied.
 
-## Mandatory before publishing
+## Immediate exposure response and remaining mandatory gates
+
+- [ ] Urgently confirm revocation/rotation of the historically detected API key and audit relevant provider usage; do not post the key value in an issue, log or chat.
+- [ ] Decide whether to temporarily restrict GitHub visibility while making a separately reviewed clean-history public snapshot. This is a repository-owner decision; visibility remains public until deliberately changed.
+- [ ] Assume historic reachable Git objects may have been cloned; preserve incident evidence and do not equate branch cleanup with removal of previously exposed bytes.
+
+## Original publication acceptance criteria (not yet cleared)
 
 - [ ] Confirm the historical GitGuardian API-key exposure has been investigated and all affected credentials are revoked/rotated, including any downstream integrations.
 - [ ] Run an independent secret and sensitive-data scan over **every Git ref, tag, reachable commit, workflow log, release and issue attachment** intended for publication, not just the current checkout.
@@ -19,7 +25,7 @@
 - [ ] Exercise protected routes with missing, invalid and cross-user auth; test Cognito signup/challenge, SQS retry and DLQ handling in disposable AWS infrastructure.
 - [x] Reconcile README and source diagrams with email-confirmed Cognito enrollment and the PostConfirmation SQS path at the source level.
 - [ ] Reconcile public capability claims against an independently verified AWS integration candidate.
-- [ ] Get an independent security/publication review before changing visibility. No production deploy is implied by publication.
+- [ ] Obtain independent security/publication review now that visibility has already changed; record exposure remediation and approve any eventual clean-history replacement. No production deploy is implied by public source access.
 
 ## Intentionally deferred
 
@@ -27,4 +33,4 @@
 - Full role-per-function AWS permissions, managed deployment, hosted demo, and security certification.
 - Public history preservation: a clean snapshot is preferred to attempting to prove every private historical object safe.
 
-This is a publication checklist, not evidence that any check has passed.
+The successful hosted source-build and SAM packaging check on PR #13 (`b8aa2f1d2bd6f0b45bf2f3d16120dbf76d280867`) demonstrates compilation/packaging, **not** historical safety or runtime security. This is a checklist; unchecked items remain blockers even if the repository is publicly accessible.
