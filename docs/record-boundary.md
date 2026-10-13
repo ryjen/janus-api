@@ -1,6 +1,6 @@
-# Record API: clean architecture boundary
+# Player and account records: clean architecture boundary
 
-Janus remains a small serverless prototype. These seams are deliberate; a general
+Playstate remains a small serverless prototype. These seams are deliberate; a general
 DI container, mediator, generic repository or domain-event framework would add
 complexity without addressing current risks.
 
