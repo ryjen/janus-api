@@ -33,7 +33,29 @@ public static class RecordRequestParser
         try
         {
             using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
-            while (reader.Read()) { }
+            var objectKeys = new Stack<HashSet<string>>();
+            var rootSeen = false;
+            var rootCompleted = false;
+            while (reader.Read())
+            {
+                switch (reader.TokenType)
+                {
+                    case JsonToken.StartObject:
+                        if (objectKeys.Count == 0 && !rootSeen) rootSeen = true;
+                        objectKeys.Push(new HashSet<string>(StringComparer.Ordinal));
+                        break;
+                    case JsonToken.PropertyName:
+                        if (objectKeys.Count == 0 || !objectKeys.Peek().Add((string)reader.Value!))
+                            return false;
+                        break;
+                    case JsonToken.EndObject:
+                        if (objectKeys.Count == 0) return false;
+                        objectKeys.Pop();
+                        if (objectKeys.Count == 0) rootCompleted = true;
+                        break;
+                }
+            }
+            if (!rootSeen || !rootCompleted || objectKeys.Count != 0) return false;
         }
         catch (JsonException) { return false; }
         if (!TryParseMutation(body, out var parsed)) return false;
