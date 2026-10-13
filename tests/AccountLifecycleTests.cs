@@ -182,7 +182,7 @@ public sealed class AccountLifecycleTests
     }
 
     [Fact]
-    public async Task FailedConfirmedPublishPropagatesForCognitoRetry()
+    public async Task FailedConfirmedPublishDoesNotAcknowledgeSuccess()
     {
         var publisher = new MemoryPublisher { Fail = true };
         await Assert.ThrowsAsync<InvalidOperationException>(
