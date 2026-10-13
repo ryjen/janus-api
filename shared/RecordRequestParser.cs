@@ -37,6 +37,7 @@ public static class RecordRequestParser
             if (StrictUtf8.GetByteCount(body) > limits.MaxUtf8Bytes) return false;
         }
         catch (EncoderFallbackException) { return false; }
+        if (!HasValidEscapedSurrogates(body)) return false;
         try
         {
             using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
@@ -96,5 +97,50 @@ public static class RecordRequestParser
         {
             return false;
         }
+    }
+
+    // Inspect escape syntax before Json.NET can replace malformed surrogate escapes.
+    // A literal escaped backslash (\\uD800) is not a Unicode escape.
+    private static bool HasValidEscapedSurrogates(string json)
+    {
+        var inString = false;
+        for (var i = 0; i < json.Length; i++)
+        {
+            var ch = json[i];
+            if (!inString)
+            {
+                if (ch == '"') inString = true;
+                continue;
+            }
+            if (ch == '"') { inString = false; continue; }
+            if (ch != '\\') continue;
+            if (++i >= json.Length) return false;
+            if (json[i] != 'u') continue;
+            if (!ReadHexCodeUnit(json, i + 1, out var code)) return false;
+            i += 4;
+            if (code is >= 0xDC00 and <= 0xDFFF) return false;
+            if (code is < 0xD800 or > 0xDBFF) continue;
+            if (i + 6 >= json.Length || json[i + 1] != '\\' || json[i + 2] != 'u' ||
+                !ReadHexCodeUnit(json, i + 3, out var low) || low is < 0xDC00 or > 0xDFFF)
+                return false;
+            i += 6;
+        }
+        return true;
+    }
+
+    private static bool ReadHexCodeUnit(string json, int offset, out int value)
+    {
+        value = 0;
+        if (offset + 4 > json.Length) return false;
+        for (var j = 0; j < 4; j++)
+        {
+            var ch = json[offset + j];
+            var digit = ch is >= '0' and <= '9' ? ch - '0'
+                : ch is >= 'a' and <= 'f' ? ch - 'a' + 10
+                : ch is >= 'A' and <= 'F' ? ch - 'A' + 10 : -1;
+            if (digit < 0) return false;
+            value = value * 16 + digit;
+        }
+        return true;
     }
 }
