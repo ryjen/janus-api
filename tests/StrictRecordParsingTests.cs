@@ -64,4 +64,13 @@ public sealed class StrictRecordParsingTests
     {
         Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
     }
+
+    [Theory]
+    [InlineData("\uD800")]
+    [InlineData("\uDC00")]
+    public void RejectsUnpairedSurrogatesInOptInParser(string invalid)
+    {
+        var json = "{\"name\":\"" + invalid + "\"}";
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
 }
