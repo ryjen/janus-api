@@ -46,12 +46,12 @@ public abstract class ModelHandler
                 case "PUT":
                     if (!RecordRequestParser.TryParseMutation(request.Body, out var updateRequest))
                         return Response(BadRequest, new { Message = "Invalid JSON object" });
-                    result = await _records.UpsertAsync(subject, updateRequest!.Fields);
+                    result = await _records.UpsertAsync(subject, updateRequest!);
                     break;
                 case "DELETE":
                     if (!RecordRequestParser.TryParseMutation(request.Body, out var deleteRequest))
                         return Response(BadRequest, new { Message = "Invalid JSON object" });
-                    result = await _records.DeleteAsync(subject, deleteRequest!.Fields);
+                    result = await _records.DeleteAsync(subject, deleteRequest!);
                     break;
                 default:
                     return Response(MethodNotAllowed, new { Message = "Method not allowed" });
