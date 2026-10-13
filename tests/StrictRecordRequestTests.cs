@@ -59,4 +59,45 @@ public sealed class StrictRecordRequestTests
         };
         Assert.False(StrictRecordRequest.TryParse(request, new RecordParsingLimits(4, 8), Schema, out _));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsDuplicateFieldsAcrossBothGatewayBodyRepresentations(bool encoded)
+    {
+        const string json = "{\"rank\":1,\"rank\":2}";
+        var request = new APIGatewayProxyRequest
+        {
+            Body = encoded ? System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json)) : json,
+            IsBase64Encoded = encoded
+        };
+        Assert.False(StrictRecordRequest.TryParse(request, Limits, Schema, out var mutation));
+        Assert.Null(mutation);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsMalformedEscapedUnicodeAcrossBothGatewayBodyRepresentations(bool encoded)
+    {
+        var json = "{\"rank\":1,\"label\":\"" + "\\uD800" + "\"}";
+        var request = new APIGatewayProxyRequest
+        {
+            Body = encoded ? System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json)) : json,
+            IsBase64Encoded = encoded
+        };
+        Assert.False(StrictRecordRequest.TryParse(request, Limits, Schema, out var mutation));
+        Assert.Null(mutation);
+    }
+
+    [Fact]
+    public void RejectsExcessiveNestingBeforeApplyingSchema()
+    {
+        var request = new APIGatewayProxyRequest
+        {
+            Body = "{\"rank\":{\"nested\":{\"tooDeep\":1}}}"
+        };
+        Assert.False(StrictRecordRequest.TryParse(
+            request, new RecordParsingLimits(128, 2), Schema, out _));
+    }
 }
