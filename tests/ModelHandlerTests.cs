@@ -189,4 +189,24 @@ public sealed class ModelHandlerTests
         Assert.False(RecordRequestParser.TryParseFields("null", out _));
         Assert.False(RecordRequestParser.TryParseFields("{bad", out _));
     }
+    [Fact]
+    public void TypedMutationPreservesLegacyJsonFields()
+    {
+        Assert.True(RecordRequestParser.TryParseMutation("{\"rank\":4,\"label\":\"player\"}", out var request));
+        Assert.NotNull(request);
+        Assert.True(request.Fields.ContainsKey("rank"));
+        Assert.True(request.Fields.ContainsKey("label"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("null")]
+    [InlineData("{bad")]
+    public void TypedMutationRejectsInvalidBodies(string? body)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(body, out var request));
+        Assert.Null(request);
+    }
+
 }
