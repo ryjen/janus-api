@@ -21,7 +21,7 @@
 - [ ] Obtain independent review of build output, tests, SAM template and security assumptions.
 - [x] Replace the source-level administrative self-enrollment path with Cognito self-signup, email confirmation, and trusted PostConfirmation provisioning (not yet verified in AWS).
 - [x] Add a subject-scoped, verified-email-only account reconciliation request for confirmed users whose SQS enqueue failed (source-level repair, not AWS-verified).
-- [ ] Verify the full Cognito confirmation → Lambda → SQS → DynamoDB and authenticated reconciliation flow, including permissions, retries and DLQ; see [security issue #9](https://github.com/ryjen/janus-api/issues/9).
+- [ ] Verify the full Cognito confirmation → Lambda → SQS → DynamoDB and authenticated reconciliation flow, including permissions, retries and DLQ; see [security issue #9](https://github.com/ryjen/playstate/issues/9).
 - [ ] Exercise protected routes with missing, invalid and cross-user auth; test Cognito signup/challenge, SQS retry and DLQ handling in disposable AWS infrastructure.
 - [x] Reconcile README and source diagrams with email-confirmed Cognito enrollment and the PostConfirmation SQS path at the source level.
 - [ ] Reconcile public capability claims against an independently verified AWS integration candidate.
