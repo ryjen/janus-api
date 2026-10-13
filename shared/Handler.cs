@@ -45,10 +45,14 @@ public abstract class ModelHandler
                     break;
                 case "POST":
                 case "PUT":
-                    result = await _records.UpsertAsync(subject, ParseFields(request.Body));
+                    if (!TryParseFields(request.Body, out var updateFields))
+                        return Response(BadRequest, new { Message = "Invalid JSON object" });
+                    result = await _records.UpsertAsync(subject, updateFields!);
                     break;
                 case "DELETE":
-                    result = await _records.DeleteAsync(subject, ParseFields(request.Body));
+                    if (!TryParseFields(request.Body, out var deleteFields))
+                        return Response(BadRequest, new { Message = "Invalid JSON object" });
+                    result = await _records.DeleteAsync(subject, deleteFields!);
                     break;
                 default:
                     return Response(MethodNotAllowed, new { Message = "Method not allowed" });
@@ -66,14 +70,6 @@ public abstract class ModelHandler
                 _ => Response(InternalServerError, new { Message = "Unexpected record status" })
             };
         }
-        catch (JsonException)
-        {
-            return Response(BadRequest, new { Message = "Invalid JSON object" });
-        }
-        catch (ArgumentException)
-        {
-            return Response(BadRequest, new { Message = "Invalid record request" });
-        }
         catch (Exception)
         {
             // Do not turn AWS/DynamoDB outages into a caller 400. No secrets or
@@ -82,12 +78,26 @@ public abstract class ModelHandler
         }
     }
 
-    private static Dictionary<string, object> ParseFields(string? body)
+    // Restrict client-error translation to parsing only. An ArgumentException or
+    // JsonException thrown by storage must not be mistaken for a bad request.
+    private static bool TryParseFields(string? body, out Dictionary<string, object>? fields)
     {
+        fields = null;
         if (string.IsNullOrWhiteSpace(body))
-            throw new ArgumentException("JSON object is required", nameof(body));
+            return false;
 
-        return body.ToParams()
-            ?? throw new ArgumentException("JSON object is required", nameof(body));
+        try
+        {
+            fields = body.ToParams();
+            return fields is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 }

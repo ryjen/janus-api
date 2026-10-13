@@ -18,7 +18,9 @@ flowchart LR
 
 - **HTTP adapter** parses API Gateway envelopes and translates application outcomes
   into 401/403/404/405/200 responses, invalid JSON to 400, and infrastructure
-  errors to 503. The adapter does not construct a table name from request data.
+  errors to 503, including infrastructure `ArgumentException` failures. The
+  400 classification applies **only during JSON body parsing**. The adapter does
+  not construct a table name from request data.
 - **Application service** validates the Cognito subject and optional caller ID;
   no store method executes for failed authorization. Account's read-only behavior
   is enforced here as well.
@@ -34,7 +36,8 @@ flowchart LR
 The public routes, Lambda handler signatures, table schemas and permission
 boundaries are unchanged. One intentional correction: malformed record bodies
 return 400 while AWS persistence failures now return 503, not the misleading 400.
-An explicit non-string/null `id` fails authorization instead of being coerced.
+An explicit null, blank, non-string or contradictory `id` fails
+authorization instead of being coerced or treated as absent.
 The current POST/PUT paths still share the historical update/upsert behavior;
 this is not a claim of REST create-vs-update semantics.
 

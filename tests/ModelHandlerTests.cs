@@ -14,12 +14,14 @@ public sealed class ModelHandlerTests
     {
         public int Calls { get; private set; }
         public bool Fail { get; set; }
+        public bool FailWithArgumentException { get; set; }
         public string? Json { get; set; }
 
         public Task<string?> ReadJsonAsync(string subject)
         {
             Calls++;
             if (Fail) throw new InvalidOperationException("Simulated outage");
+            if (FailWithArgumentException) throw new ArgumentException("Simulated storage argument error");
             return Task.FromResult(Json);
         }
 
@@ -27,6 +29,7 @@ public sealed class ModelHandlerTests
         {
             Calls++;
             if (Fail) throw new InvalidOperationException("Simulated outage");
+            if (FailWithArgumentException) throw new ArgumentException("Simulated storage argument error");
             return Task.CompletedTask;
         }
 
@@ -34,6 +37,7 @@ public sealed class ModelHandlerTests
         {
             Calls++;
             if (Fail) throw new InvalidOperationException("Simulated outage");
+            if (FailWithArgumentException) throw new ArgumentException("Simulated storage argument error");
             return Task.CompletedTask;
         }
     }
@@ -69,6 +73,18 @@ public sealed class ModelHandlerTests
         Assert.Equal(1, store.Calls);
     }
 
+    [Theory]
+    [InlineData("GET", null)]
+    [InlineData("PUT", "{}")]
+    public async Task StorageArgumentErrorsAre503Not400(string method, string? body)
+    {
+        var store = new FakeStore { FailWithArgumentException = true };
+        var response = await new TestHandler(store).Handler(Request(method, body: body), null!);
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain("Simulated", response.Body);
+        Assert.Equal(1, store.Calls);
+    }
+
     [Fact]
     public async Task InvalidJsonReturns400WithoutPersistence()
     {
@@ -93,6 +109,17 @@ public sealed class ModelHandlerTests
         var store = new FakeStore();
         var response = await new TestHandler(store).Handler(
             Request("PUT", body: "{\"id\":\"different\",\"rank\":4}"), null!);
+        Assert.Equal(403, response.StatusCode);
+        Assert.Equal(0, store.Calls);
+    }
+
+    [Theory]
+    [InlineData("{\"id\":\"\"}")]
+    [InlineData("{\"id\":\"  \"}")]
+    public async Task ExplicitBlankBodyIdsAreForbidden(string body)
+    {
+        var store = new FakeStore();
+        var response = await new TestHandler(store).Handler(Request("PUT", body: body), null!);
         Assert.Equal(403, response.StatusCode);
         Assert.Equal(0, store.Calls);
     }
