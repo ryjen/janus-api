@@ -1,6 +1,6 @@
 # Architecture, access control and operational boundaries
 
-Janus is a historical serverless backend prototype, now being prepared as a read-only portfolio case study rather than a hardened authentication product.
+Playstate is a historical serverless backend prototype, now being prepared as a read-only portfolio case study rather than a hardened authentication product.
 
 ## Control plane
 
@@ -58,7 +58,7 @@ new-account provisioning.
 - API Gateway Cognito authorizer validation with ID and access tokens; unauthenticated and cross-subject 401/403 tests, non-enumerating password recovery, expired or incorrect reset codes and rate limits.
 - SQS trigger, conditional-write replays, malformed messages, DLQ handling and recovery.
 - DynamoDB and Cognito lifecycle/migration, WAF and rate limits, IAM role policy analysis, logs/privacy review.
-- Credential incident and Git history scan before creating any **public** mirror.
+- Credential incident and Git history scan before approving a sanitized public release.
 
 ## Infrastructure lint interpretation
 
@@ -66,7 +66,7 @@ AWS SAM CLI 1.168.0 accepts the template under `sam validate --template-file tem
 
 ## Enrollment security implementation and validation gap
 
-The historical administrative self-signup path has been replaced in this candidate with Cognito self-enrollment and email-code confirmation. A Cognito PostConfirmation Lambda emits the SQS account event only for the `PostConfirmation_ConfirmSignUp` trigger with confirmed email attributes. Unit and source-template tests cover trigger filtering and IAM boundaries. **No disposable AWS integration test has established that the confirmation, Lambda permission, enqueue, SQS retry and account write actually work together**, including partial failure and recovery. [Issue #9](https://github.com/ryjen/janus-api/issues/9) remains blocking until that evidence is available.
+The historical administrative self-signup path has been replaced in this candidate with Cognito self-enrollment and email-code confirmation. A Cognito PostConfirmation Lambda emits the SQS account event only for the `PostConfirmation_ConfirmSignUp` trigger with confirmed email attributes. Unit and source-template tests cover trigger filtering and IAM boundaries. **No disposable AWS integration test has established that the confirmation, Lambda permission, enqueue, SQS retry and account write actually work together**, including partial failure and recovery. [Issue #9](https://github.com/ryjen/playstate/issues/9) remains blocking until that evidence is available.
 
 ## Authenticated recovery of partial confirmation failures
 
