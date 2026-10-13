@@ -33,7 +33,7 @@ public static class RecordRequestEnvelope
         if (body.Length > 4L * ((maxDecodedBytes + 2L) / 3L)) return false;
         try
         {
-            var bytes = Convert.FromBase64String(body);
+            var bytes = System.Convert.FromBase64String(body);
             if (bytes.Length > maxDecodedBytes) return false;
             json = StrictUtf8.GetString(bytes);
             return true;
