@@ -16,7 +16,8 @@ public partial class Auth
         try
         {
             var email = PasswordRecoveryInput.Read(request, "email");
-            var password = PasswordRecoveryInput.Read(request, "password");
+            var password = request.TryGetValue("password", out var rawPassword) && rawPassword is string suppliedPassword &&
+                !string.IsNullOrWhiteSpace(suppliedPassword) ? suppliedPassword : null;
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 return Response(BadRequest, new { Message = "Email and password required" });
 
