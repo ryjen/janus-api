@@ -44,4 +44,40 @@ public sealed class AuthHttpParsingTests
         }, null!);
         Assert.Equal(401, result.StatusCode);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("\"text\"")]
+    public async Task MissingOrNonObjectAuthBodyIs400(string? body)
+    {
+        using var cognito = new AmazonCognitoIdentityProviderClient(
+            new AnonymousAWSCredentials(), RegionEndpoint.USEast1);
+        var auth = new Auth(cognito, "test-pool", "test-client");
+        var result = await auth.Handler(new APIGatewayProxyRequest
+        {
+            Path = "/signup",
+            Body = body
+        }, null!);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task MalformedInputResponseDoesNotEchoSensitiveBody()
+    {
+        const string secret = "should-not-be-logged-or-echoed";
+        using var cognito = new AmazonCognitoIdentityProviderClient(
+            new AnonymousAWSCredentials(), RegionEndpoint.USEast1);
+        var auth = new Auth(cognito, "test-pool", "test-client");
+        var result = await auth.Handler(new APIGatewayProxyRequest
+        {
+            Path = "/authenticate",
+            Body = "{\"password\":\"" + secret
+        }, null!);
+        Assert.Equal(400, result.StatusCode);
+        Assert.DoesNotContain(secret, result.Body);
+    }
 }
