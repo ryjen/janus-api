@@ -134,6 +134,15 @@ class TemplateContractTests(unittest.TestCase):
         self.assertNotIn("AdminCreateUser", repr(recovery["Policies"]))
         self.assertNotIn("sqs:SendMessage", repr(self.resources["AccountFunction"]["Properties"]["Policies"]))
 
+    def test_separate_account_provisioner_handler(self):
+        function = self.resources["AccountProvisionFunction"]["Properties"]
+        self.assertEqual(function["Handler"],
+                         "GameplayDataSystem::Janus.AccountProvisioner::Handler")
+        self.assertEqual(self.resources["AccountFunction"]["Properties"]["Handler"],
+                         "GameplayDataSystem::Janus.Account::Handler")
+        self.assertEqual(self.resources["AccountConfirmedFunction"]["Properties"]["Handler"],
+                         "GameplayDataSystem::Janus.AccountConfirmed::Handler")
+
     def test_queue_provision_and_dlq(self):
         events = self.resources["AccountProvisionFunction"]["Properties"]["Events"]
         self.assertEqual(events["AccountCreated"]["Type"], "SQS")
