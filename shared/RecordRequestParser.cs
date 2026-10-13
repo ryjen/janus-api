@@ -36,8 +36,14 @@ public static class RecordRequestParser
             var objectKeys = new Stack<HashSet<string>>();
             var rootSeen = false;
             var rootCompleted = false;
+            var firstToken = true;
             while (reader.Read())
             {
+                if (firstToken)
+                {
+                    firstToken = false;
+                    if (reader.TokenType != JsonToken.StartObject) return false;
+                }
                 switch (reader.TokenType)
                 {
                     case JsonToken.StartObject:
