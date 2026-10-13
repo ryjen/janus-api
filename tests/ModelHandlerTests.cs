@@ -153,7 +153,7 @@ public sealed class ModelHandlerTests
     {
         var store = new FakeStore();
         var response = await new TestHandler(store).Handler(
-            Request(method, body: "{\\"rank\\":4}"), null!);
+            Request(method, body: "{\"rank\":4}"), null!);
         Assert.Equal(200, response.StatusCode);
         Assert.Contains("Player updated", response.Body);
         Assert.Equal(1, store.Calls);
