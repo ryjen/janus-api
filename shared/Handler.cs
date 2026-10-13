@@ -1,7 +1,6 @@
 #nullable enable
 
 using Amazon.Lambda.APIGatewayEvents;
-using Newtonsoft.Json;
 using static System.Net.HttpStatusCode;
 
 namespace Janus;
@@ -45,12 +44,12 @@ public abstract class ModelHandler
                     break;
                 case "POST":
                 case "PUT":
-                    if (!TryParseFields(request.Body, out var updateFields))
+                    if (!RecordRequestParser.TryParseFields(request.Body, out var updateFields))
                         return Response(BadRequest, new { Message = "Invalid JSON object" });
                     result = await _records.UpsertAsync(subject, updateFields!);
                     break;
                 case "DELETE":
-                    if (!TryParseFields(request.Body, out var deleteFields))
+                    if (!RecordRequestParser.TryParseFields(request.Body, out var deleteFields))
                         return Response(BadRequest, new { Message = "Invalid JSON object" });
                     result = await _records.DeleteAsync(subject, deleteFields!);
                     break;
@@ -78,26 +77,4 @@ public abstract class ModelHandler
         }
     }
 
-    // Restrict client-error translation to parsing only. An ArgumentException or
-    // JsonException thrown by storage must not be mistaken for a bad request.
-    private static bool TryParseFields(string? body, out Dictionary<string, object>? fields)
-    {
-        fields = null;
-        if (string.IsNullOrWhiteSpace(body))
-            return false;
-
-        try
-        {
-            fields = body.ToParams();
-            return fields is not null;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-    }
 }
