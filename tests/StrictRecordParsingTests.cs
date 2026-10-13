@@ -74,4 +74,25 @@ public sealed class StrictRecordParsingTests
             Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
         }
     }
+
+    [Fact]
+    public void RejectsUnpairedEscapedSurrogates()
+    {
+        foreach (var code in new[] { "D800", "DC00" })
+        {
+            var json = "{\"name\":\"" + "\\u" + code + "\"}";
+            Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+        }
+        Assert.False(RecordRequestParser.TryParseMutation(
+            "{\"name\":\"" + "\\uD800" + "x\"}", Limits, out _));
+    }
+
+    [Fact]
+    public void AcceptsValidSurrogatePairsAndEscapedBackslashes()
+    {
+        Assert.True(RecordRequestParser.TryParseMutation(
+            "{\"name\":\"" + "\\uD83D\\uDE00" + "\"}", Limits, out _));
+        Assert.True(RecordRequestParser.TryParseMutation(
+            "{\"name\":\"" + "\\\\uD800" + "\"}", Limits, out _));
+    }
 }
