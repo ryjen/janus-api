@@ -14,6 +14,8 @@ public sealed record RecordParsingLimits(int MaxUtf8Bytes, int MaxDepth);
 
 public static class RecordRequestParser
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
     public static bool TryParseMutation(string? body, out RecordMutationRequest? request)
     {
         request = null;
@@ -29,7 +31,12 @@ public static class RecordRequestParser
         if (limits is null || limits.MaxUtf8Bytes <= 0 || limits.MaxDepth <= 0)
             throw new ArgumentOutOfRangeException(nameof(limits));
         if (string.IsNullOrWhiteSpace(body)) return false;
-        if (Encoding.UTF8.GetByteCount(body) > limits.MaxUtf8Bytes) return false;
+        // Fail closed on malformed UTF-16 instead of replacement-fallback encoding.
+        try
+        {
+            if (StrictUtf8.GetByteCount(body) > limits.MaxUtf8Bytes) return false;
+        }
+        catch (EncoderFallbackException) { return false; }
         try
         {
             using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
