@@ -70,6 +70,7 @@ The project was formerly named **Janus API**. The GitHub repository is now `ryje
 
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Record application boundaries and follow-up design](docs/record-boundary.md)
+- [Player API compatibility baseline and proposed v2 contract](docs/player-api-contract.md)
 - [Security limitations and reporting](SECURITY.md)
 - [Publication and history gate](docs/publication-gate.md)
 - [Changelog](CHANGELOG.md)
