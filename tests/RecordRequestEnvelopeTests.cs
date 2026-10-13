@@ -22,7 +22,7 @@ public sealed class RecordRequestEnvelopeTests
     public void DecodesBase64WithStrictUtf8()
     {
         const string json = "{\"rank\":4}";
-        var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        var encoded = System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
         Assert.True(RecordRequestEnvelope.TryDecode(encoded, true, 64, out var decoded));
         Assert.Equal(json, decoded);
     }
@@ -31,8 +31,8 @@ public sealed class RecordRequestEnvelopeTests
     public void RejectsOversizedMalformedAndNonUtf8Base64()
     {
         Assert.False(RecordRequestEnvelope.TryDecode("!!!", true, 8, out _));
-        Assert.False(RecordRequestEnvelope.TryDecode(Convert.ToBase64String(new byte[] { 0xff }), true, 8, out _));
-        Assert.False(RecordRequestEnvelope.TryDecode(Convert.ToBase64String(new byte[64]), true, 16, out _));
+        Assert.False(RecordRequestEnvelope.TryDecode(System.Convert.ToBase64String(new byte[] { 0xff }), true, 8, out _));
+        Assert.False(RecordRequestEnvelope.TryDecode(System.Convert.ToBase64String(new byte[64]), true, 16, out _));
     }
 
     [Fact]
