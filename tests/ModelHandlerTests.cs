@@ -209,4 +209,34 @@ public sealed class ModelHandlerTests
         Assert.Null(request);
     }
 
+
+    [Fact]
+    public void BoundedParserCountsUtf8BytesNotCharacters()
+    {
+        const string body = "{\"label\":\"é\"}";
+        var limit = new RecordParsingLimits(System.Text.Encoding.UTF8.GetByteCount(body) - 1, 16);
+        Assert.False(RecordRequestParser.TryParseMutation(body, limit, out _));
+        Assert.True(RecordRequestParser.TryParseMutation(body,
+            new RecordParsingLimits(System.Text.Encoding.UTF8.GetByteCount(body), 16), out var request));
+        Assert.NotNull(request);
+    }
+
+    [Fact]
+    public void BoundedParserRejectsDeeplyNestedInput()
+    {
+        const string body = "{\"a\":{\"b\":{\"c\":1}}}";
+        Assert.False(RecordRequestParser.TryParseMutation(body,
+            new RecordParsingLimits(1024, 2), out _));
+        Assert.True(RecordRequestParser.TryParseMutation(body,
+            new RecordParsingLimits(1024, 5), out _));
+    }
+
+    [Fact]
+    public void BoundedParserDoesNotAffectLegacyEntryPoint()
+    {
+        const string body = "{\"message\":\"extended legacy payload\"}";
+        Assert.False(RecordRequestParser.TryParseMutation(body,
+            new RecordParsingLimits(10, 10), out _));
+        Assert.True(RecordRequestParser.TryParseMutation(body, out _));
+    }
 }
