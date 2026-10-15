@@ -47,7 +47,7 @@ public partial class Auth
     {
         try
         {
-            var email = request["email"]?.ToString();
+            var email = PasswordRecoveryInput.Read(request, "email");
             var code = PasswordRecoveryInput.Read(request, "code");
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
                 return Response(BadRequest, new { Message = "Email and confirmation code required" });
