@@ -7,7 +7,11 @@ namespace Janus;
 
 // Provider-agnostic login result; never expose AWS SDK response objects across
 // the HTTP/application seam. A missing challenge name represents token delivery.
-public sealed record LoginSessionResult(string? IdToken, string? ChallengeName, string? Session);
+public sealed record LoginSessionResult(string? IdToken, string? ChallengeName, string? Session)
+{
+    // Do not let default record formatting expose an ID token or challenge session.
+    public override string ToString() => nameof(LoginSessionResult);
+}
 
 public interface IAuthenticationGateway
 {
