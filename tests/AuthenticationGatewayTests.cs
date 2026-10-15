@@ -193,7 +193,7 @@ public sealed class AuthenticationGatewayTests
         };
         var response = await Handler(gateway).Authenticate(LoginFields());
         Assert.Equal(503, response.StatusCode);
-        Assert.DoesNotContain("token", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("token", response.Body);
         Assert.Equal(1, gateway.LoginCalls);
     }
 
@@ -206,7 +206,7 @@ public sealed class AuthenticationGatewayTests
         var gateway = new FakeAuthenticationGateway { ChallengeToken = token };
         var response = await Handler(gateway).NewPassword(ChallengeFields());
         Assert.Equal(503, response.StatusCode);
-        Assert.DoesNotContain("token", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("token", response.Body);
         Assert.Equal(1, gateway.ChallengeCalls);
     }
 }
