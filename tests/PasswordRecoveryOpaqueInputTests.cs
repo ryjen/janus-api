@@ -44,8 +44,7 @@ public sealed class PasswordRecoveryOpaqueInputTests
 
         Assert.Equal(200, response.StatusCode);
         Assert.Equal(1, fake.Calls);
-        Assert.Equal("leading and trailing ", fake.Confirmation!.Password.Substring(1));
-        Assert.Equal(" leading and trailing ", fake.Confirmation.Password);
+        Assert.Equal(" leading and trailing ", fake.Confirmation!.Password);
         Assert.Equal("owner@example.invalid", fake.Confirmation.Username);
         Assert.Equal("123456", fake.Confirmation.ConfirmationCode);
         Assert.Equal("client", fake.Confirmation.ClientId);
