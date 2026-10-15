@@ -38,10 +38,11 @@ public partial class Auth
 
             return Response(OK, new { Token = authResponse.AuthenticationResult.IdToken });
         }
-        catch
+        catch (Exception error)
         {
-            // Do not echo credentials, Cognito exception messages, or tokens.
-            return Response(Unauthorized, new { Message = "Authentication failed" });
+            // Rejected credentials remain generic 401. Provider and unknown-effect
+            // faults must not be mistaken for bad credentials.
+            return AuthenticationFailed(error);
         }
     }
 }

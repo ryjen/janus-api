@@ -9,6 +9,16 @@ using static Shared;
 
 partial class Auth
 {
+    // All login/challenge errors use the same generic body; status reflects
+    // known rejected credentials versus an indeterminate provider failure.
+    private static APIGatewayProxyResponse AuthenticationFailed(Exception error)
+    {
+        var kind = CognitoAuthenticationErrorPolicy.Classify(error);
+        var status = kind == CognitoAuthenticationFailure.Rejected
+            ? Unauthorized : ServiceUnavailable;
+        return Response(status, new { Message = "Authentication failed" });
+    }
+
     protected static APIGatewayProxyResponse Challenged(ChallengeNameType type, string session)
     {
         var errors = new Dictionary<ChallengeNameType, string>
