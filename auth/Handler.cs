@@ -17,7 +17,7 @@ public partial class Auth
     private readonly IEnrollmentGateway _enrollmentGateway;
     private readonly IPasswordRecoveryGateway _passwordRecoveryGateway;
     private readonly AuthenticationService _authenticationService;
-    private readonly IAuthObservationSink _observations;
+    private readonly AuthObservationCounter? _observations;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -46,13 +46,13 @@ public partial class Auth
         : this(cognitoClient, userPoolId, clientId, enrollmentGateway,
             passwordRecoveryGateway, authenticationGateway, observations: null) { }
 
-    // Opt-in observation sink is a distinct overload; existing binaries and
+    // Opt-in bounded in-memory counter is a distinct overload; existing binaries and
     // the default Lambda composition continue to resolve the original method.
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
         string? clientId, IEnrollmentGateway? enrollmentGateway,
         IPasswordRecoveryGateway? passwordRecoveryGateway,
         IAuthenticationGateway? authenticationGateway,
-        IAuthObservationSink? observations)
+        AuthObservationCounter? observations)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
@@ -65,7 +65,7 @@ public partial class Auth
         _authenticationService = new AuthenticationService(
             authenticationGateway ?? new CognitoAuthenticationGateway(
                 _cognitoClient, _userPoolId, _clientId));
-        _observations = observations ?? NoOpAuthObservationSink.Instance;
+        _observations = observations;
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
@@ -87,17 +87,10 @@ public partial class Auth
             result = Response(InternalServerError, new { Message = "Internal error" });
         }
 
-        // The only allowed observation dimensions are finite enums, derived
-        // from trusted dispatch/status codes, never request or response bodies.
-        // A failing optional sink must not change authentication outcomes.
-        try
-        {
-            _observations.Record(new AuthObservation(route, ClassifyStatus(result.StatusCode)));
-        }
-        catch
-        {
-            // Deliberately do not log sink failures or request/response details.
-        }
+        // Optional in-memory counters are sealed, fixed-size and lock-free.
+        // No arbitrary callbacks, I/O, logging or background tasks run here.
+        // The counters see only trusted enums, never caller-controlled strings.
+        _observations?.Record(new AuthObservation(route, ClassifyStatus(result.StatusCode)));
 
         return result;
     }
