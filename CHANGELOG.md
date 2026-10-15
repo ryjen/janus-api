@@ -1,5 +1,7 @@
 # Unreleased
 
+- Validate Cognito authentication and legacy new-password challenge inputs without coercing structured credentials into strings; preserve exact password/session bytes and keep invalid-credential responses generic.
+
 - Extract account recovery and provisioning application ports with a shared SQS/DynamoDB adapter; split the SQS Lambda entry point from the account HTTP handler and inject Cognito/client queue dependencies for isolated tests. Preserve the existing wire envelope and conditional DynamoDB behavior.
 
 - Isolate subject-scoped record operations behind an application service and a per-resource DynamoDB adapter; add fake-port unit tests, stop mapping backend outages to HTTP 400, preserve existing record JSON and Lambda entry points.
