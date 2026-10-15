@@ -106,6 +106,21 @@ public sealed class AuthObservationTests
     }
 
     [Fact]
+    public void LegacySixParameterConstructorKeepsBinarySignature()
+    {
+        var constructor = typeof(Auth).GetConstructor(new[]
+        {
+            typeof(IAmazonCognitoIdentityProvider),
+            typeof(string),
+            typeof(string),
+            typeof(IEnrollmentGateway),
+            typeof(IPasswordRecoveryGateway),
+            typeof(IAuthenticationGateway)
+        });
+        Assert.NotNull(constructor);
+    }
+
+    [Fact]
     public void ObservationContractHasOnlyTwoEnumDimensions()
     {
         var properties = typeof(AuthObservation).GetProperties(
