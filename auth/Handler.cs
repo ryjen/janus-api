@@ -37,11 +37,22 @@ public partial class Auth
 
     // Inject the enrollment port for contract tests without replacing the
     // existing default Lambda composition and Cognito-client constructors.
+    // Preserve this exact public constructor signature: optional arguments are
+    // resolved at compile time, so replacing it would break existing binaries.
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
         string? clientId, IEnrollmentGateway? enrollmentGateway,
         IPasswordRecoveryGateway? passwordRecoveryGateway = null,
-        IAuthenticationGateway? authenticationGateway = null,
-        IAuthObservationSink? observations = null)
+        IAuthenticationGateway? authenticationGateway = null)
+        : this(cognitoClient, userPoolId, clientId, enrollmentGateway,
+            passwordRecoveryGateway, authenticationGateway, observations: null) { }
+
+    // Opt-in observation sink is a distinct overload; existing binaries and
+    // the default Lambda composition continue to resolve the original method.
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
+        string? clientId, IEnrollmentGateway? enrollmentGateway,
+        IPasswordRecoveryGateway? passwordRecoveryGateway,
+        IAuthenticationGateway? authenticationGateway,
+        IAuthObservationSink? observations)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
