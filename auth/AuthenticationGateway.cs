@@ -55,6 +55,12 @@ public sealed class CognitoAuthenticationGateway : IAuthenticationGateway
             }
         }, cancellationToken);
 
+        // An ambiguous "successful" response must never be treated as
+        // authenticated if Cognito supplied neither a token nor a challenge.
+        if (result.ChallengeName is null &&
+            string.IsNullOrWhiteSpace(result.AuthenticationResult?.IdToken))
+            throw new InvalidOperationException("Cognito authentication result missing token");
+
         return new LoginSessionResult(
             result.AuthenticationResult?.IdToken,
             result.ChallengeName?.ToString(),
@@ -77,6 +83,8 @@ public sealed class CognitoAuthenticationGateway : IAuthenticationGateway
                 },
                 Session = session
             }, cancellationToken);
-        return result.AuthenticationResult?.IdToken;
+        return !string.IsNullOrWhiteSpace(result.AuthenticationResult?.IdToken)
+            ? result.AuthenticationResult.IdToken
+            : throw new InvalidOperationException("Cognito challenge result missing token");
     }
 }
