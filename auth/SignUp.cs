@@ -15,8 +15,9 @@ public partial class Auth
     {
         try
         {
-            var email = request["email"]?.ToString();
-            var password = request["password"]?.ToString();
+            var email = PasswordRecoveryInput.Read(request, "email");
+            var password = request.TryGetValue("password", out var rawPassword) && rawPassword is string suppliedPassword &&
+                !string.IsNullOrWhiteSpace(suppliedPassword) ? suppliedPassword : null;
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 return Response(BadRequest, new { Message = "Email and password required" });
 
@@ -46,8 +47,8 @@ public partial class Auth
     {
         try
         {
-            var email = request["email"]?.ToString();
-            var code = request["code"]?.ToString();
+            var email = PasswordRecoveryInput.Read(request, "email");
+            var code = PasswordRecoveryInput.Read(request, "code");
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
                 return Response(BadRequest, new { Message = "Email and confirmation code required" });
 
