@@ -290,4 +290,40 @@ public sealed class CognitoAuthAdapterTests
         Assert.DoesNotContain("sample-code", response.Body);
     }
 
+    [Fact]
+    public async Task SignupLimitExceededIsAnUnknownOutcomeNotInvalidInput()
+    {
+        using var fake = new FakeCognito
+        {
+            SignupError = new LimitExceededException(
+                "User may already be unconfirmed; sensitive status must not be disclosed")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(SignUpInput());
+
+        Assert.Equal(503, response.StatusCode);
+        Assert.NotNull(fake.SignedUp);
+        Assert.DoesNotContain("unconfirmed", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("testing-not-a-real-credential", response.Body);
+    }
+
+    [Fact]
+    public async Task AlreadyConfirmedOrUnauthorizedCodeIsGenericClientError()
+    {
+        using var fake = new FakeCognito
+        {
+            ConfirmError = new NotAuthorizedException("Sensitive confirmation state")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").ConfirmSignUp(
+            new Dictionary<string, object>
+            {
+                ["email"] = "owner@example.invalid",
+                ["code"] = "sample-code"
+            });
+
+        Assert.Equal(400, response.StatusCode);
+        Assert.NotNull(fake.Confirmed);
+        Assert.DoesNotContain("Sensitive", response.Body);
+        Assert.DoesNotContain("sample-code", response.Body);
+    }
+
 }
