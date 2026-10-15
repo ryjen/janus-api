@@ -21,6 +21,9 @@ public static class StrictRecordRequest
         return TryParse(envelope, limits, schema, out mutation);
     }
 
+    private const int SingleValueCount = 1;
+    private const int MediaTypeSegmentCount = 1;
+    private const int MaxMediaTypeSegmentCount = 2;
     private const string ContentTypeHeader = "Content-Type";
     private const string JsonMediaType = "application/json";
     private const string Utf8CharsetParameter = "charset=utf-8";
@@ -53,7 +56,7 @@ public static class StrictRecordRequest
             {
                 if (!string.Equals(header.Key, ContentTypeHeader, StringComparison.OrdinalIgnoreCase))
                     continue;
-                if (hasMulti || header.Value is null || header.Value.Count != 1 ||
+                if (hasMulti || header.Value is null || header.Value.Count != SingleValueCount ||
                     header.Value[0] is null)
                     return false;
                 multi = header.Value[0];
@@ -67,11 +70,11 @@ public static class StrictRecordRequest
             return false;
 
         var parts = (single ?? multi)!.Split(';');
-        if (parts.Length is < 1 or > 2 ||
+        if (parts.Length is < MediaTypeSegmentCount or > MaxMediaTypeSegmentCount ||
             !string.Equals(parts[0].Trim(), JsonMediaType, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        return parts.Length == 1 ||
+        return parts.Length == MediaTypeSegmentCount ||
             string.Equals(parts[1].Trim(), Utf8CharsetParameter, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(parts[1].Trim(), QuotedUtf8CharsetParameter, StringComparison.OrdinalIgnoreCase);
     }
