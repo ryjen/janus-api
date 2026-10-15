@@ -20,20 +20,13 @@ public partial class Auth
 
         try
         {
-            var authResponse = await _cognitoClient.AdminRespondToAuthChallengeAsync(new AdminRespondToAuthChallengeRequest
-            {
-                ChallengeName = ChallengeNameType.NEW_PASSWORD_REQUIRED,
-                ClientId = _clientId,
-                UserPoolId = _userPoolId,
-                ChallengeResponses = new Dictionary<string, string>
-                {
-                    { "USERNAME", email },
-                    { "NEW_PASSWORD", password }
-                },
-                Session = session
-            });
+            var token = await _authenticationGateway.RespondToNewPasswordAsync(
+                email, password, session);
 
-            return Response(OK, new { Token = authResponse.AuthenticationResult.IdToken });
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Authentication gateway returned no challenge token");
+
+            return Response(OK, new { Token = token });
         }
         catch (Exception error)
         {

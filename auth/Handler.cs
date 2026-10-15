@@ -16,6 +16,7 @@ public partial class Auth
     private readonly IAmazonCognitoIdentityProvider _cognitoClient;
     private readonly IEnrollmentGateway _enrollmentGateway;
     private readonly IPasswordRecoveryGateway _passwordRecoveryGateway;
+    private readonly IAuthenticationGateway _authenticationGateway;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -37,7 +38,8 @@ public partial class Auth
     // existing default Lambda composition and Cognito-client constructors.
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
         string? clientId, IEnrollmentGateway? enrollmentGateway,
-        IPasswordRecoveryGateway? passwordRecoveryGateway = null)
+        IPasswordRecoveryGateway? passwordRecoveryGateway = null,
+        IAuthenticationGateway? authenticationGateway = null)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
@@ -47,6 +49,8 @@ public partial class Auth
         _enrollmentGateway = enrollmentGateway ?? new CognitoEnrollmentGateway(_cognitoClient, _clientId);
         _passwordRecoveryGateway = passwordRecoveryGateway ??
             new CognitoPasswordRecoveryGateway(_cognitoClient, _clientId);
+        _authenticationGateway = authenticationGateway ??
+            new CognitoAuthenticationGateway(_cognitoClient, _userPoolId, _clientId);
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)

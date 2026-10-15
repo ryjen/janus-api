@@ -19,20 +19,26 @@ partial class Auth
         return Response(status, new { Message = "Authentication failed" });
     }
 
-    protected static APIGatewayProxyResponse Challenged(ChallengeNameType type, string session)
+    protected static APIGatewayProxyResponse Challenged(string type, string session)
     {
-        var errors = new Dictionary<ChallengeNameType, string>
+        // Preserve the legacy response for known and unrecognized Cognito
+        // challenges without leaking SDK response types through the port.
+        if (string.Equals(type, ChallengeNameType.NEW_PASSWORD_REQUIRED.ToString(),
+                StringComparison.Ordinal))
         {
-            { ChallengeNameType.NEW_PASSWORD_REQUIRED, "New password required"}
-        };
+            return Response(Unauthorized, new
+            {
+                Message = "Authentication incomplete",
+                Error = "New password required",
+                Session = session
+            });
+        }
 
-        if (errors.ContainsKey(type))
+        return Response(Unauthorized, new
         {
-            return Response(Unauthorized, new { Message = "Authentication incomplete", Error = errors[type], Session = session });
-        }
-        else
-        {
-            return Response(Unauthorized, new { Message = "Authorization incomplete", Error = type.ToString(), Session = session });
-        }
+            Message = "Authorization incomplete",
+            Error = type,
+            Session = session
+        });
     }
 }

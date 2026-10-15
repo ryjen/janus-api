@@ -21,22 +21,17 @@ public partial class Auth
 
         try
         {
-            var authResponse = await _cognitoClient.AdminInitiateAuthAsync(new AdminInitiateAuthRequest
-            {
-                UserPoolId = _userPoolId,
-                ClientId = _clientId,
-                AuthFlow = AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
-                AuthParameters = new Dictionary<string, string>
-                {
-                    { "USERNAME", email },
-                    { "PASSWORD", password }
-                }
-            });
+            var authResult = await _authenticationGateway.AuthenticateAsync(email, password);
 
-            if (authResponse.ChallengeName != null)
-                return Challenged(authResponse.ChallengeName, authResponse.Session);
+            if (authResult.ChallengeName is not null)
+                return Challenged(authResult.ChallengeName, authResult.Session);
 
-            return Response(OK, new { Token = authResponse.AuthenticationResult.IdToken });
+            // Enforce this invariant at the application boundary as well:
+            // a future injected gateway must not turn a missing token into HTTP 200.
+            if (string.IsNullOrWhiteSpace(authResult.IdToken))
+                throw new InvalidOperationException("Authentication gateway returned no token");
+
+            return Response(OK, new { Token = authResult.IdToken });
         }
         catch (Exception error)
         {
