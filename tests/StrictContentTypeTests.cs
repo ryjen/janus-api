@@ -130,7 +130,7 @@ public sealed class StrictContentTypeTests
     public void SupportsBase64EncodedBodyWithConsistentHeaders()
     {
         var request = Make("application/json");
-        request.Body = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Body));
+        request.Body = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Body));
         request.IsBase64Encoded = true;
         request.MultiValueHeaders = new Dictionary<string, IList<string>>
         {
