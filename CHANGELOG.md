@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add an opt-in, no-op-by-default authentication observation boundary with enum-only route/outcome dimensions, no PII or tokens, exactly one emission attempt per HTTP request and non-disruptive sink errors.
+
 - Redact Cognito ID tokens and opaque challenge sessions from default authentication result string formatting; preserve actual result fields for protocol use and test the diagnostic representations.
 
 - Move Cognito login/challenge completion and provider-error classification into a typed application service; retain legacy HTTP response mapping and fail-closed token requirements. Add fake-gateway outcome regression tests.
