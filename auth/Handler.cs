@@ -14,6 +14,7 @@ public partial class Auth
 
     // Parameterless Lambda composition root; injected client is used in tests.
     private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+    private readonly IEnrollmentGateway _enrollmentGateway;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -29,12 +30,19 @@ public partial class Auth
             Environment.GetEnvironmentVariable("CLIENT_ID")) { }
 
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId, string? clientId)
+        : this(cognitoClient, userPoolId, clientId, enrollmentGateway: null) { }
+
+    // Inject the enrollment port for contract tests without replacing the
+    // existing default Lambda composition and Cognito-client constructors.
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
+        string? clientId, IEnrollmentGateway? enrollmentGateway)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
             throw new ArgumentException("User pool configuration required", nameof(userPoolId));
         _clientId = !string.IsNullOrWhiteSpace(clientId) ? clientId :
             throw new ArgumentException("Client configuration required", nameof(clientId));
+        _enrollmentGateway = enrollmentGateway ?? new CognitoEnrollmentGateway(_cognitoClient, _clientId);
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
