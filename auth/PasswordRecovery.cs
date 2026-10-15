@@ -40,7 +40,8 @@ public partial class Auth
     {
         var email = PasswordRecoveryInput.Read(request, "email");
         var code = PasswordRecoveryInput.Read(request, "code");
-        var password = PasswordRecoveryInput.Read(request, "password");
+        // Passwords are opaque: never trim, coerce, or normalize their bytes.
+        var password = AuthInput.ReadOpaque(request, "password");
 
         if (email is null || code is null || password is null)
             return Response(BadRequest, new { Message = "Email, confirmation code and new password required" });

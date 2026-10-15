@@ -1,5 +1,7 @@
 # Unreleased
 
+- Preserve opaque whitespace in Cognito forgotten-password confirmation (matching signup, authentication and challenge handling); test the HTTP path and rejection of structured password values before AWS calls.
+
 - Validate Cognito authentication and legacy new-password challenge inputs without coercing structured credentials into strings; preserve exact password/session bytes and keep invalid-credential responses generic.
 
 - Extract account recovery and provisioning application ports with a shared SQS/DynamoDB adapter; split the SQS Lambda entry point from the account HTTP handler and inject Cognito/client queue dependencies for isolated tests. Preserve the existing wire envelope and conditional DynamoDB behavior.
