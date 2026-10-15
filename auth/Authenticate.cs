@@ -26,6 +26,11 @@ public partial class Auth
             if (authResult.ChallengeName is not null)
                 return Challenged(authResult.ChallengeName, authResult.Session);
 
+            // Enforce this invariant at the application boundary as well:
+            // a future injected gateway must not turn a missing token into HTTP 200.
+            if (string.IsNullOrWhiteSpace(authResult.IdToken))
+                throw new InvalidOperationException("Authentication gateway returned no token");
+
             return Response(OK, new { Token = authResult.IdToken });
         }
         catch (Exception error)
