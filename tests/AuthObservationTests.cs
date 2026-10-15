@@ -22,18 +22,6 @@ public sealed class AuthObservationTests
     private const string TestPool = "test-pool";
     private const string TestClient = "test-client";
 
-    private sealed class Sink : IAuthObservationSink
-    {
-        public List<AuthObservation> Events { get; } = new();
-        public bool ThrowAfterRecording { get; set; }
-
-        public void Record(AuthObservation observation)
-        {
-            Events.Add(observation);
-            if (ThrowAfterRecording) throw new InvalidOperationException(TestPassword);
-        }
-    }
-
     private sealed class Enrollment : IEnrollmentGateway
     {
         public Exception? Failure { get; set; }
@@ -72,7 +60,7 @@ public sealed class AuthObservationTests
     }
 
     private static Auth Create(
-        Sink sink, Enrollment? enrollment = null, Recovery? recovery = null,
+        AuthObservationCounter sink, Enrollment? enrollment = null, Recovery? recovery = null,
         Authentication? authentication = null)
     {
         // All gateway operations use injected fakes; this client never calls AWS.
@@ -92,12 +80,11 @@ public sealed class AuthObservationTests
     };
 
     private static void AssertSingle(
-        Sink sink, AuthRoute route, AuthObservationKind kind)
+        AuthObservationCounter sink, AuthRoute route, AuthObservationKind kind)
     {
-        var observation = Assert.Single(sink.Events);
-        Assert.Equal(route, observation.Route);
-        Assert.Equal(kind, observation.Kind);
-        var stringified = observation.ToString();
+        Assert.Equal(1, sink.TotalCount);
+        Assert.Equal(1, sink.Count(route, kind));
+        var stringified = new AuthObservation(route, kind).ToString();
         Assert.DoesNotContain(TestEmail, stringified);
         Assert.DoesNotContain(TestPassword, stringified);
         Assert.DoesNotContain(TestSession, stringified);
@@ -143,7 +130,7 @@ public sealed class AuthObservationTests
     public async Task MalformedPayloadEmitsOnlyOneCategoricalEvent(
         string path, AuthRoute route)
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(new APIGatewayProxyRequest
         {
             Path = path,
@@ -156,7 +143,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task UnknownUserPathNeverBecomesMetricLabel()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(new APIGatewayProxyRequest
         {
             Path = "/user-supplied-" + TestPassword,
@@ -169,7 +156,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task SuccessfulLoginEmitsOneSuccessWithoutToken()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(Request(AuthRoutes.AuthenticatePath, new
         {
             email = TestEmail,
@@ -183,7 +170,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task CognitoChallengeAndDenialShareNonIdentifyingObservation()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var gateway = new Authentication
         {
             LoginResult = new(null, "NEW_PASSWORD_REQUIRED", TestSession)
@@ -202,7 +189,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task CredentialRejectionCannotExposeSdkExceptionText()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var gateway = new Authentication
         {
             Failure = new NotAuthorizedException(TestPassword)
@@ -219,7 +206,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task ProviderFaultIsCategoricalUnavailable()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var gateway = new Authentication
         {
             Failure = new InternalErrorException(TestPassword)
@@ -236,7 +223,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task AcceptedRecoveryEmitsOnlyCoarseAcceptedEvent()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(
             Request(AuthRoutes.ForgotPasswordPath, new { email = TestEmail }), null!);
         Assert.Equal(202, response.StatusCode);
@@ -246,8 +233,8 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task KnownAndUnknownRecoveryUsersHaveIdenticalObservations()
     {
-        var knownSink = new Sink();
-        var unknownSink = new Sink();
+        var knownSink = new AuthObservationCounter();
+        var unknownSink = new AuthObservationCounter();
         var input = Request(AuthRoutes.ForgotPasswordPath, new { email = TestEmail });
 
         var knownResponse = await Create(knownSink).Handler(input, null!);
@@ -257,7 +244,7 @@ public sealed class AuthObservationTests
 
         Assert.Equal(knownResponse.StatusCode, unknownResponse.StatusCode);
         Assert.Equal(knownResponse.Body, unknownResponse.Body);
-        Assert.Equal(knownSink.Events, unknownSink.Events);
+        AssertSingle(knownSink, AuthRoute.ForgotPassword, AuthObservationKind.Accepted);
         AssertSingle(unknownSink, AuthRoute.ForgotPassword, AuthObservationKind.Accepted);
     }
 
@@ -268,8 +255,8 @@ public sealed class AuthObservationTests
         {
             email = TestEmail, password = TestPassword
         });
-        var normalSink = new Sink();
-        var duplicateSink = new Sink();
+        var normalSink = new AuthObservationCounter();
+        var duplicateSink = new AuthObservationCounter();
 
         var ordinary = await Create(normalSink).Handler(input, null!);
         var duplicate = await Create(duplicateSink,
@@ -278,14 +265,14 @@ public sealed class AuthObservationTests
 
         Assert.Equal(ordinary.StatusCode, duplicate.StatusCode);
         Assert.Equal(ordinary.Body, duplicate.Body);
-        Assert.Equal(normalSink.Events, duplicateSink.Events);
+        AssertSingle(normalSink, AuthRoute.SignUp, AuthObservationKind.Succeeded);
         AssertSingle(duplicateSink, AuthRoute.SignUp, AuthObservationKind.Succeeded);
     }
 
     [Fact]
-    public async Task FailingObservationSinkDoesNotChangeAuthenticationResponse()
+    public async Task BoundedCounterDoesNotChangeAuthenticationResponse()
     {
-        var sink = new Sink { ThrowAfterRecording = true };
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(
             Request(AuthRoutes.NewPasswordChallengePath, new
             {
@@ -299,7 +286,7 @@ public sealed class AuthObservationTests
     [Fact]
     public async Task ConfirmationCodeCannotBecomeObservationField()
     {
-        var sink = new Sink();
+        var sink = new AuthObservationCounter();
         var response = await Create(sink).Handler(
             Request(AuthRoutes.ConfirmSignUpPath, new
             {
@@ -308,4 +295,24 @@ public sealed class AuthObservationTests
         Assert.Equal(200, response.StatusCode);
         AssertSingle(sink, AuthRoute.ConfirmSignUp, AuthObservationKind.Succeeded);
     }
+    [Fact]
+    public void InvalidCounterDimensionsAreIgnored()
+    {
+        var counter = new AuthObservationCounter();
+        counter.Record(new AuthObservation((AuthRoute)int.MaxValue, AuthObservationKind.Accepted));
+        counter.Record(new AuthObservation(AuthRoute.Authenticate, (AuthObservationKind)int.MaxValue));
+        Assert.Equal(0, counter.TotalCount);
+    }
+
+    [Fact]
+    public void ConcurrentCounterUpdatesStayWithinFixedCardinality()
+    {
+        const int IncrementCount = 128;
+        var counter = new AuthObservationCounter();
+        Parallel.For(0, IncrementCount, _ =>
+            counter.Record(new AuthObservation(AuthRoute.Authenticate, AuthObservationKind.Succeeded)));
+        Assert.Equal(IncrementCount, counter.TotalCount);
+        Assert.Equal(IncrementCount, counter.Count(AuthRoute.Authenticate, AuthObservationKind.Succeeded));
+    }
+
 }
