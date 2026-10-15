@@ -18,19 +18,8 @@ public partial class Auth
         if (email is null || password is null || session is null)
             return Response(BadRequest, new { Message = "Email, new password and challenge session required" });
 
-        try
-        {
-            var token = await _authenticationGateway.RespondToNewPasswordAsync(
-                email, password, session);
-
-            if (string.IsNullOrWhiteSpace(token))
-                throw new InvalidOperationException("Authentication gateway returned no challenge token");
-
-            return Response(OK, new { Token = token });
-        }
-        catch (Exception error)
-        {
-            return AuthenticationFailed(error);
-        }
+        var outcome = await _authenticationService.RespondToNewPasswordAsync(
+            email, password, session);
+        return AuthenticationResponse(outcome);
     }
 }
