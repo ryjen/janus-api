@@ -21,22 +21,12 @@ public partial class Auth
 
         try
         {
-            var authResponse = await _cognitoClient.AdminInitiateAuthAsync(new AdminInitiateAuthRequest
-            {
-                UserPoolId = _userPoolId,
-                ClientId = _clientId,
-                AuthFlow = AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
-                AuthParameters = new Dictionary<string, string>
-                {
-                    { "USERNAME", email },
-                    { "PASSWORD", password }
-                }
-            });
+            var authResult = await _authenticationGateway.AuthenticateAsync(email, password);
 
-            if (authResponse.ChallengeName != null)
-                return Challenged(authResponse.ChallengeName, authResponse.Session);
+            if (authResult.ChallengeName is not null)
+                return Challenged(authResult.ChallengeName, authResult.Session);
 
-            return Response(OK, new { Token = authResponse.AuthenticationResult.IdToken });
+            return Response(OK, new { Token = authResult.IdToken });
         }
         catch (Exception error)
         {
