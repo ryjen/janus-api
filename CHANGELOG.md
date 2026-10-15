@@ -1,5 +1,7 @@
 # Unreleased
 
+- Distinguish Cognito login and required-new-password challenge rejections (generic 401) from upstream or unknown-effect errors (generic 503), using a typed exception-classification policy and fake-provider regression tests. No API routes, success payloads, IAM or AWS resources changed.
+
 - Return generic 503 for Cognito signup/confirmation provider failures, preserving 400 for known invalid request/code outcomes and duplicate-signup non-enumeration. Do not expose upstream errors or assert rollback after indeterminate signup results.
 
 - Validate Cognito authentication and legacy new-password challenge inputs without coercing structured credentials into strings; preserve exact password/session bytes and keep invalid-credential responses generic.

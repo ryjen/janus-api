@@ -35,9 +35,9 @@ public partial class Auth
 
             return Response(OK, new { Token = authResponse.AuthenticationResult.IdToken });
         }
-        catch
+        catch (Exception error)
         {
-            return Response(Unauthorized, new { Message = "Authentication failed" });
+            return AuthenticationFailed(error);
         }
     }
 }
