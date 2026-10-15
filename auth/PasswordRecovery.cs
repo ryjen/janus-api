@@ -18,11 +18,7 @@ public partial class Auth
 
         try
         {
-            await _cognitoClient.ForgotPasswordAsync(new ForgotPasswordRequest
-            {
-                ClientId = _clientId,
-                Username = email
-            });
+            await _passwordRecoveryGateway.StartAsync(email);
         }
         catch (UserNotFoundException) { /* Maintain a generic response. */ }
         catch (InvalidParameterException) { /* Cognito may simulate a missing-user recovery error. */ }
@@ -48,13 +44,7 @@ public partial class Auth
 
         try
         {
-            await _cognitoClient.ConfirmForgotPasswordAsync(new ConfirmForgotPasswordRequest
-            {
-                ClientId = _clientId,
-                Username = email,
-                ConfirmationCode = code,
-                Password = password
-            });
+            await _passwordRecoveryGateway.ConfirmAsync(email, code, password);
         }
         catch (CodeMismatchException) { return Response(BadRequest, new { Message = "Password recovery could not be completed" }); }
         catch (ExpiredCodeException) { return Response(BadRequest, new { Message = "Password recovery could not be completed" }); }
