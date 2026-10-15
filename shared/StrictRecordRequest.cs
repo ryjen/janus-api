@@ -17,33 +17,63 @@ public static class StrictRecordRequest
         out RecordMutationRequest? mutation)
     {
         mutation = null;
-        if (envelope is null || !HasJsonContentType(envelope.Headers)) return false;
+        if (envelope is null || !HasJsonContentType(envelope)) return false;
         return TryParse(envelope, limits, schema, out mutation);
     }
 
-    private static bool HasJsonContentType(IDictionary<string, string>? headers)
+    private const string ContentTypeHeader = "Content-Type";
+    private const string JsonMediaType = "application/json";
+    private const string Utf8CharsetParameter = "charset=utf-8";
+    private const string QuotedUtf8CharsetParameter = "charset=\"utf-8\"";
+
+    // API Gateway can populate both the single- and multi-value header views.
+    // Accept at most one Content-Type in each view, and only when they agree.
+    // An ambiguous header must never be used to select a strict v2 parser.
+    private static bool HasJsonContentType(APIGatewayProxyRequest request)
     {
-        if (headers is null) return false;
-        string? contentType = null;
-        foreach (var header in headers)
+        string? single = null;
+        var hasSingle = false;
+        if (request.Headers is not null)
         {
-            if (!string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (contentType is not null) return false; // ambiguous casing duplicates
-            contentType = header.Value;
+            foreach (var header in request.Headers)
+            {
+                if (!string.Equals(header.Key, ContentTypeHeader, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (hasSingle || header.Value is null) return false;
+                single = header.Value;
+                hasSingle = true;
+            }
         }
-        if (contentType is null) return false;
-        var parts = contentType.Split(';');
-        if (!string.Equals(parts[0].Trim(), "application/json", StringComparison.OrdinalIgnoreCase))
+
+        string? multi = null;
+        var hasMulti = false;
+        if (request.MultiValueHeaders is not null)
+        {
+            foreach (var header in request.MultiValueHeaders)
+            {
+                if (!string.Equals(header.Key, ContentTypeHeader, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (hasMulti || header.Value is null || header.Value.Count != 1 ||
+                    header.Value[0] is null)
+                    return false;
+                multi = header.Value[0];
+                hasMulti = true;
+            }
+        }
+
+        if (!hasSingle && !hasMulti) return false;
+        if (hasSingle && hasMulti &&
+            !string.Equals(single!.Trim(), multi!.Trim(), StringComparison.OrdinalIgnoreCase))
             return false;
-        for (var i = 1; i < parts.Length; i++)
-        {
-            var parameter = parts[i].Trim();
-            if (!string.Equals(parameter, "charset=utf-8", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(parameter, "charset=\"utf-8\"", StringComparison.OrdinalIgnoreCase))
-                return false;
-        }
-        return true;
+
+        var parts = (single ?? multi)!.Split(';');
+        if (parts.Length is < 1 or > 2 ||
+            !string.Equals(parts[0].Trim(), JsonMediaType, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return parts.Length == 1 ||
+            string.Equals(parts[1].Trim(), Utf8CharsetParameter, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(parts[1].Trim(), QuotedUtf8CharsetParameter, StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool TryParse(
