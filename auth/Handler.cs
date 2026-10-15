@@ -17,6 +17,7 @@ public partial class Auth
     private readonly IEnrollmentGateway _enrollmentGateway;
     private readonly IPasswordRecoveryGateway _passwordRecoveryGateway;
     private readonly AuthenticationService _authenticationService;
+    private readonly AuthObservationCounter? _observations;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -36,10 +37,22 @@ public partial class Auth
 
     // Inject the enrollment port for contract tests without replacing the
     // existing default Lambda composition and Cognito-client constructors.
+    // Preserve this exact public constructor signature: optional arguments are
+    // resolved at compile time, so replacing it would break existing binaries.
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
         string? clientId, IEnrollmentGateway? enrollmentGateway,
         IPasswordRecoveryGateway? passwordRecoveryGateway = null,
         IAuthenticationGateway? authenticationGateway = null)
+        : this(cognitoClient, userPoolId, clientId, enrollmentGateway,
+            passwordRecoveryGateway, authenticationGateway, observations: null) { }
+
+    // Opt-in bounded in-memory counter is a distinct overload; existing binaries and
+    // the default Lambda composition continue to resolve the original method.
+    public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
+        string? clientId, IEnrollmentGateway? enrollmentGateway,
+        IPasswordRecoveryGateway? passwordRecoveryGateway,
+        IAuthenticationGateway? authenticationGateway,
+        AuthObservationCounter? observations)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
@@ -52,33 +65,60 @@ public partial class Auth
         _authenticationService = new AuthenticationService(
             authenticationGateway ?? new CognitoAuthenticationGateway(
                 _cognitoClient, _userPoolId, _clientId));
+        _observations = observations;
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        var route = AuthRoute.Unknown;
+        APIGatewayProxyResponse result;
         try
         {
-            var route = AuthRoutes.Resolve(request.Path);
+            route = AuthRoutes.Resolve(request.Path);
             if (route is AuthRoute.Unknown)
-                return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
-
-            if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
-                return Response(BadRequest, new { Message = "Invalid JSON object" });
-
-            return route switch
-            {
-                AuthRoute.Authenticate => await Authenticate(parameters!),
-                AuthRoute.NewPasswordChallenge => await NewPassword(parameters!),
-                AuthRoute.SignUp => await SignUp(parameters!),
-                AuthRoute.ConfirmSignUp => await ConfirmSignUp(parameters!),
-                AuthRoute.ForgotPassword => await StartPasswordRecovery(parameters!),
-                AuthRoute.ConfirmForgotPassword => await ConfirmPasswordRecovery(parameters!),
-                _ => Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" })
-            };
+                result = Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
+            else if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
+                result = Response(BadRequest, new { Message = "Invalid JSON object" });
+            else
+                result = await DispatchAsync(route, parameters!);
         }
         catch
         {
-            return Response(InternalServerError, new { Message = "Internal error" });
+            result = Response(InternalServerError, new { Message = "Internal error" });
         }
+
+        // Optional in-memory counters are sealed, fixed-size and lock-free.
+        // No arbitrary callbacks, I/O, logging or background tasks run here.
+        // The counters see only trusted enums, never caller-controlled strings.
+        _observations?.Record(new AuthObservation(route, ClassifyStatus(result.StatusCode)));
+
+        return result;
     }
+
+    private Task<APIGatewayProxyResponse> DispatchAsync(
+        AuthRoute route, Dictionary<string, object> parameters) => route switch
+    {
+        AuthRoute.Authenticate => Authenticate(parameters),
+        AuthRoute.NewPasswordChallenge => NewPassword(parameters),
+        AuthRoute.SignUp => SignUp(parameters),
+        AuthRoute.ConfirmSignUp => ConfirmSignUp(parameters),
+        AuthRoute.ForgotPassword => StartPasswordRecovery(parameters),
+        AuthRoute.ConfirmForgotPassword => ConfirmPasswordRecovery(parameters),
+        _ => Task.FromResult(Response(Unauthorized, new
+        {
+            Message = "Authentication failed",
+            Error = "unknown path"
+        }))
+    };
+
+    private static AuthObservationKind ClassifyStatus(int statusCode) =>
+        (System.Net.HttpStatusCode)statusCode switch
+        {
+            OK => AuthObservationKind.Succeeded,
+            Accepted => AuthObservationKind.Accepted,
+            BadRequest => AuthObservationKind.InvalidInput,
+            Unauthorized => AuthObservationKind.DeniedOrChallenged,
+            ServiceUnavailable => AuthObservationKind.Unavailable,
+            _ => AuthObservationKind.Failed
+        };
 }

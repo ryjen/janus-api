@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add an opt-in, fixed-size in-memory authentication outcome counter using enum-only dimensions and atomic increments; no arbitrary synchronous callback or external telemetry, preserving authentication response availability.
+
 - Redact Cognito ID tokens and opaque challenge sessions from default authentication result string formatting; preserve actual result fields for protocol use and test the diagnostic representations.
 
 - Move Cognito login/challenge completion and provider-error classification into a typed application service; retain legacy HTTP response mapping and fail-closed token requirements. Add fake-gateway outcome regression tests.
