@@ -9,12 +9,19 @@ using static Shared;
 
 partial class Auth
 {
-    // All login/challenge errors use the same generic body; status reflects
-    // known rejected credentials versus an indeterminate provider failure.
-    private static APIGatewayProxyResponse AuthenticationFailed(Exception error)
+    // Application outcomes are mapped to the legacy API Gateway wire format.
+    // Validate invariants again here so an invalid future outcome is fail-closed.
+    private static APIGatewayProxyResponse AuthenticationResponse(AuthenticationOutcome outcome)
     {
-        var kind = CognitoAuthenticationErrorPolicy.Classify(error);
-        var status = kind == CognitoAuthenticationFailure.Rejected
+        if (outcome.Kind == AuthenticationOutcomeKind.Authenticated &&
+            !string.IsNullOrWhiteSpace(outcome.Token))
+            return Response(OK, new { Token = outcome.Token });
+
+        if (outcome.Kind == AuthenticationOutcomeKind.ChallengeRequired &&
+            !string.IsNullOrWhiteSpace(outcome.ChallengeName))
+            return Challenged(outcome.ChallengeName, outcome.Session!);
+
+        var status = outcome.Kind == AuthenticationOutcomeKind.Rejected
             ? Unauthorized : ServiceUnavailable;
         return Response(status, new { Message = "Authentication failed" });
     }
