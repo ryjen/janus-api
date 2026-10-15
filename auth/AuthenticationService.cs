@@ -16,7 +16,12 @@ public sealed record AuthenticationOutcome(
     AuthenticationOutcomeKind Kind,
     string? Token = null,
     string? ChallengeName = null,
-    string? Session = null);
+    string? Session = null)
+{
+    // C# record ToString normally prints all fields, including secrets.
+    // Diagnostic string formatting must never include tokens or sessions.
+    public override string ToString() => $"{nameof(AuthenticationOutcome)}({Kind})";
+}
 
 // Own Cognito-result interpretation and failure classification while keeping
 // the gateway transport-independent and the HTTP adapter responsible for
