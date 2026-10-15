@@ -21,15 +21,7 @@ public partial class Auth
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 return Response(BadRequest, new { Message = "Email and password required" });
 
-            await _cognitoClient.SignUpAsync(new SignUpRequest
-            {
-                ClientId = _clientId,
-                Username = email,
-                Password = password,
-                UserAttributes = new List<AttributeType> {
-                    new AttributeType { Name = "email", Value = email }
-                }
-            });
+            await _enrollmentGateway.RequestSignUpAsync(email, password);
             return SignupResponsePolicy.Acknowledged();
         }
         catch (UsernameExistsException)
@@ -59,12 +51,7 @@ public partial class Auth
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
                 return Response(BadRequest, new { Message = "Email and confirmation code required" });
 
-            await _cognitoClient.ConfirmSignUpAsync(new ConfirmSignUpRequest
-            {
-                ClientId = _clientId,
-                Username = email,
-                ConfirmationCode = code
-            });
+            await _enrollmentGateway.ConfirmEmailAsync(email, code);
             // Only the Cognito PostConfirmation trigger can enqueue the account.
             return Response(OK, new { Confirmed = true });
         }
