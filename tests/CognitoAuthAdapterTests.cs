@@ -20,6 +20,8 @@ public sealed class CognitoAuthAdapterTests
         public bool DuplicateSignup { get; set; }
         public bool UnknownUser { get; set; }
         public bool ServiceFailure { get; set; }
+        public Exception? SignupError { get; set; }
+        public Exception? ConfirmError { get; set; }
 
         // Explicit fake credentials and region ensure no real AWS call, instance
         // profile lookup, or IAM connection is needed in these tests.
@@ -29,6 +31,8 @@ public sealed class CognitoAuthAdapterTests
             CancellationToken cancellationToken = default)
         {
             SignedUp = request;
+            if (SignupError is not null)
+                return Task.FromException<SignUpResponse>(SignupError);
             if (DuplicateSignup)
                 return Task.FromException<SignUpResponse>(new UsernameExistsException("User exists"));
             return Task.FromResult(new SignUpResponse { UserConfirmed = false });
@@ -38,6 +42,8 @@ public sealed class CognitoAuthAdapterTests
             CancellationToken cancellationToken = default)
         {
             Confirmed = request;
+            if (ConfirmError is not null)
+                return Task.FromException<ConfirmSignUpResponse>(ConfirmError);
             return Task.FromResult(new ConfirmSignUpResponse());
         }
 
@@ -204,4 +210,120 @@ public sealed class CognitoAuthAdapterTests
         Assert.Equal("123456", fake.Confirmed.ConfirmationCode);
         Assert.Equal("test-client", fake.Confirmed.ClientId);
     }
+
+    [Fact]
+    public async Task CognitoInvalidSignupPasswordRemains400WithoutDetails()
+    {
+        using var fake = new FakeCognito
+        {
+            SignupError = new InvalidPasswordException("Password and user details are sensitive")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(SignUpInput());
+        Assert.Equal(400, response.StatusCode);
+        Assert.NotNull(fake.SignedUp);
+        Assert.DoesNotContain("sensitive", response.Body);
+        Assert.DoesNotContain("testing-not-a-real-credential", response.Body);
+    }
+
+    [Fact]
+    public async Task CognitoInvalidSignupParametersRemain400WithoutDetails()
+    {
+        using var fake = new FakeCognito
+        {
+            SignupError = new InvalidParameterException("Sensitive invalid parameter")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(SignUpInput());
+        Assert.Equal(400, response.StatusCode);
+        Assert.DoesNotContain("Sensitive", response.Body);
+    }
+
+    [Fact]
+    public async Task SignupProviderFailureReturns503InsteadOfBadRequest()
+    {
+        using var fake = new FakeCognito
+        {
+            SignupError = new InternalErrorException("Sensitive upstream fault")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(SignUpInput());
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain("Sensitive", response.Body);
+    }
+
+    [Theory]
+    [InlineData("wrong")]
+    [InlineData("expired")]
+    [InlineData("missing")]
+    public async Task InvalidConfirmationCodeResponsesAreGeneric400(string kind)
+    {
+        using var fake = new FakeCognito
+        {
+            ConfirmError = kind switch
+            {
+                "wrong" => new CodeMismatchException("Wrong code with sensitive details"),
+                "expired" => new ExpiredCodeException("Expired code with sensitive details"),
+                _ => new UserNotFoundException("Unknown account with sensitive details")
+            }
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").ConfirmSignUp(
+            new Dictionary<string, object> {
+                ["email"] = "owner@example.invalid", ["code"] = "sample-code"
+            });
+        Assert.Equal(400, response.StatusCode);
+        Assert.NotNull(fake.Confirmed);
+        Assert.DoesNotContain("sensitive", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sample-code", response.Body);
+    }
+
+    [Fact]
+    public async Task ConfirmationProviderFailureReturns503InsteadOfBadCode()
+    {
+        using var fake = new FakeCognito
+        {
+            ConfirmError = new InternalErrorException("Sensitive upstream fault")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").ConfirmSignUp(
+            new Dictionary<string, object> {
+                ["email"] = "owner@example.invalid", ["code"] = "sample-code"
+            });
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain("Sensitive", response.Body);
+        Assert.DoesNotContain("sample-code", response.Body);
+    }
+
+    [Fact]
+    public async Task SignupLimitExceededIsAnUnknownOutcomeNotInvalidInput()
+    {
+        using var fake = new FakeCognito
+        {
+            SignupError = new LimitExceededException(
+                "User may already be unconfirmed; sensitive status must not be disclosed")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").SignUp(SignUpInput());
+
+        Assert.Equal(503, response.StatusCode);
+        Assert.NotNull(fake.SignedUp);
+        Assert.DoesNotContain("unconfirmed", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("testing-not-a-real-credential", response.Body);
+    }
+
+    [Fact]
+    public async Task AlreadyConfirmedOrUnauthorizedCodeIsGenericClientError()
+    {
+        using var fake = new FakeCognito
+        {
+            ConfirmError = new NotAuthorizedException("Sensitive confirmation state")
+        };
+        var response = await new Auth(fake, "test-pool", "test-client").ConfirmSignUp(
+            new Dictionary<string, object>
+            {
+                ["email"] = "owner@example.invalid",
+                ["code"] = "sample-code"
+            });
+
+        Assert.Equal(400, response.StatusCode);
+        Assert.NotNull(fake.Confirmed);
+        Assert.DoesNotContain("Sensitive", response.Body);
+        Assert.DoesNotContain("sample-code", response.Body);
+    }
+
 }

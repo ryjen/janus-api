@@ -1,5 +1,7 @@
 # Unreleased
 
+- Return generic 503 for Cognito signup/confirmation provider failures, preserving 400 for known invalid request/code outcomes and duplicate-signup non-enumeration. Do not expose upstream errors or assert rollback after indeterminate signup results.
+
 - Validate Cognito authentication and legacy new-password challenge inputs without coercing structured credentials into strings; preserve exact password/session bytes and keep invalid-credential responses generic.
 
 - Extract account recovery and provisioning application ports with a shared SQS/DynamoDB adapter; split the SQS Lambda entry point from the account HTTP handler and inject Cognito/client queue dependencies for isolated tests. Preserve the existing wire envelope and conditional DynamoDB behavior.

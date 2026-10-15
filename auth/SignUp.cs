@@ -37,9 +37,16 @@ public partial class Auth
             // A duplicate address must look the same as an eligible signup.
             return SignupResponsePolicy.Acknowledged();
         }
+        catch (Exception error) when (error is InvalidPasswordException or InvalidParameterException)
+        {
+            // Known client-input failures; do not disclose Cognito details.
+            return Response(BadRequest, new { Message = "Registration could not be completed" });
+        }
         catch
         {
-            return Response(BadRequest, new { Message = "Registration could not be completed" });
+            // Delivery, throttling, provider and unknown-effect failures are not
+            // evidence of an invalid request. Do not claim that signup rolled back.
+            return Response(ServiceUnavailable, new { Message = "Registration unavailable" });
         }
     }
 
@@ -61,9 +68,17 @@ public partial class Auth
             // Only the Cognito PostConfirmation trigger can enqueue the account.
             return Response(OK, new { Confirmed = true });
         }
+        catch (Exception error) when (error is CodeMismatchException or ExpiredCodeException or
+            InvalidParameterException or NotAuthorizedException or UserNotFoundException or AliasExistsException)
+        {
+            // Wrong/expired codes and rejected identity claims share a generic
+            // client-error shape. Do not reveal existence or raw Cognito details.
+            return Response(BadRequest, new { Message = "Confirmation could not be completed" });
+        }
         catch
         {
-            return Response(BadRequest, new { Message = "Confirmation could not be completed" });
+            // Treat unknown/provider failures as unavailable, not a bad code.
+            return Response(ServiceUnavailable, new { Message = "Confirmation unavailable" });
         }
     }
 }
