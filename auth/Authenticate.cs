@@ -19,25 +19,7 @@ public partial class Auth
         if (email is null || password is null)
             return Response(BadRequest, new { Message = "Email and password required" });
 
-        try
-        {
-            var authResult = await _authenticationGateway.AuthenticateAsync(email, password);
-
-            if (authResult.ChallengeName is not null)
-                return Challenged(authResult.ChallengeName, authResult.Session);
-
-            // Enforce this invariant at the application boundary as well:
-            // a future injected gateway must not turn a missing token into HTTP 200.
-            if (string.IsNullOrWhiteSpace(authResult.IdToken))
-                throw new InvalidOperationException("Authentication gateway returned no token");
-
-            return Response(OK, new { Token = authResult.IdToken });
-        }
-        catch (Exception error)
-        {
-            // Rejected credentials remain generic 401. Provider and unknown-effect
-            // faults must not be mistaken for bad credentials.
-            return AuthenticationFailed(error);
-        }
+        var outcome = await _authenticationService.AuthenticateAsync(email, password);
+        return AuthenticationResponse(outcome);
     }
 }
