@@ -41,30 +41,23 @@ public partial class Auth
     {
         try
         {
-            if (request.Path is not ("/authenticate" or "/reset" or "/signup" or "/confirm" or
-                "/password/forgot" or "/password/confirm"))
+            var route = AuthRoutes.Resolve(request.Path);
+            if (route is AuthRoute.Unknown)
                 return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
 
             if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
                 return Response(BadRequest, new { Message = "Invalid JSON object" });
 
-            switch (request.Path)
+            return route switch
             {
-            case "/authenticate":
-                return await Authenticate(parameters!);
-            case "/reset":
-                return await NewPassword(parameters!);
-            case "/signup":
-                return await SignUp(parameters!);
-            case "/confirm":
-                return await ConfirmSignUp(parameters!);
-            case "/password/forgot":
-                return await StartPasswordRecovery(parameters!);
-            case "/password/confirm":
-                return await ConfirmPasswordRecovery(parameters!);
-            default:
-                return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
-            }
+                AuthRoute.Authenticate => await Authenticate(parameters!),
+                AuthRoute.NewPasswordChallenge => await NewPassword(parameters!),
+                AuthRoute.SignUp => await SignUp(parameters!),
+                AuthRoute.ConfirmSignUp => await ConfirmSignUp(parameters!),
+                AuthRoute.ForgotPassword => await StartPasswordRecovery(parameters!),
+                AuthRoute.ConfirmForgotPassword => await ConfirmPasswordRecovery(parameters!),
+                _ => Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" })
+            };
         }
         catch
         {
