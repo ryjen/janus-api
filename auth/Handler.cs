@@ -16,7 +16,7 @@ public partial class Auth
     private readonly IAmazonCognitoIdentityProvider _cognitoClient;
     private readonly IEnrollmentGateway _enrollmentGateway;
     private readonly IPasswordRecoveryGateway _passwordRecoveryGateway;
-    private readonly IAuthenticationGateway _authenticationGateway;
+    private readonly AuthenticationService _authenticationService;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -49,8 +49,9 @@ public partial class Auth
         _enrollmentGateway = enrollmentGateway ?? new CognitoEnrollmentGateway(_cognitoClient, _clientId);
         _passwordRecoveryGateway = passwordRecoveryGateway ??
             new CognitoPasswordRecoveryGateway(_cognitoClient, _clientId);
-        _authenticationGateway = authenticationGateway ??
-            new CognitoAuthenticationGateway(_cognitoClient, _userPoolId, _clientId);
+        _authenticationService = new AuthenticationService(
+            authenticationGateway ?? new CognitoAuthenticationGateway(
+                _cognitoClient, _userPoolId, _clientId));
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
