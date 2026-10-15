@@ -15,9 +15,12 @@ public partial class Auth
     {
         try
         {
-            string email = request["email"].ToString();
-            string password = request["password"].ToString();
-            string session = request["session"].ToString();
+            var email = AuthenticationInput.ReadRaw(request, "email");
+            var password = AuthenticationInput.ReadRaw(request, "password");
+            var session = AuthenticationInput.ReadRaw(request, "session");
+
+            if (email is null || password is null || session is null)
+                return Response(Unauthorized, new { Message = "Authentication failed" });
 
             var newPasswordRequest = new AdminRespondToAuthChallengeRequest
             {
