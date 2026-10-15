@@ -180,4 +180,33 @@ public sealed class AuthenticationGatewayTests
         Assert.Equal(503, response.StatusCode);
         Assert.DoesNotContain("private upstream failure", response.Body);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task GatewayCannotClaimSuccessfulLoginWithoutToken(string? token)
+    {
+        var gateway = new FakeAuthenticationGateway
+        {
+            LoginResult = new(token, null, null)
+        };
+        var response = await Handler(gateway).Authenticate(LoginFields());
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain("token", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, gateway.LoginCalls);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task GatewayCannotClaimSuccessfulChallengeWithoutToken(string? token)
+    {
+        var gateway = new FakeAuthenticationGateway { ChallengeToken = token };
+        var response = await Handler(gateway).NewPassword(ChallengeFields());
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain("token", response.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, gateway.ChallengeCalls);
+    }
 }
