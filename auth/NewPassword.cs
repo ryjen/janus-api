@@ -1,4 +1,5 @@
 using Amazon.Lambda.APIGatewayEvents;
+using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using static System.Net.HttpStatusCode;
 
