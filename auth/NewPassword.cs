@@ -23,6 +23,9 @@ public partial class Auth
             var token = await _authenticationGateway.RespondToNewPasswordAsync(
                 email, password, session);
 
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Authentication gateway returned no challenge token");
+
             return Response(OK, new { Token = token });
         }
         catch (Exception error)
