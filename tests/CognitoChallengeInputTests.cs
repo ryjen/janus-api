@@ -4,7 +4,9 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Amazon.Lambda.APIGatewayEvents;
 using Janus;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace Janus.Tests;
@@ -165,5 +167,35 @@ public sealed class CognitoChallengeInputTests
         });
         Assert.Equal(401, response.StatusCode);
         Assert.DoesNotContain("Challenge rejected", response.Body);
+    }
+
+    [Theory]
+    [InlineData("/authenticate", "password")]
+    [InlineData("/authenticate", "email")]
+    [InlineData("/reset", "password")]
+    [InlineData("/reset", "session")]
+    [InlineData("/reset", "email")]
+    public async Task HttpAdapterRejectsStructuredCredentialBeforeCognito(string route, string key)
+    {
+        using var fake = new FakeCognito();
+        var fields = new Dictionary<string, object>
+        {
+            ["email"] = "user@example.invalid",
+            ["password"] = "sample password",
+            ["session"] = "sample session"
+        };
+        fields[key] = new { nested = 42 };
+
+        var response = await new Auth(fake, "pool", "client").Handler(
+            new APIGatewayProxyRequest
+            {
+                Path = route,
+                Body = JsonConvert.SerializeObject(fields)
+            }, null!);
+
+        Assert.Equal(400, response.StatusCode);
+        Assert.Null(fake.Login);
+        Assert.Null(fake.Challenge);
+        Assert.DoesNotContain("nested", response.Body);
     }
 }
