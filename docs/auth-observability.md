@@ -6,20 +6,20 @@ counter/metrics integration, monitoring capability, or security attestation.
 ## Trust boundary
 
 The HTTP adapter resolves each incoming path through the existing
-enum-backed \`AuthRoutes\` table and emits **one** \`AuthObservation\` after
+enum-backed `AuthRoutes` table and emits **one** `AuthObservation` after
 determining the response status. The only observation fields are:
 
-- \`AuthRoute\` (seven members, including \`Unknown\`)
-- \`AuthObservationKind\` (six members: \`Succeeded\`, \`Accepted\`,
-  \`InvalidInput\`, \`DeniedOrChallenged\`, \`Unavailable\`, \`Failed\`)
+- `AuthRoute` (seven members, including `Unknown`)
+- `AuthObservationKind` (six members: `Succeeded`, `Accepted`,
+  `InvalidInput`, `DeniedOrChallenged`, `Unavailable`, `Failed`)
 
 Maximum theoretical dimension combinations: **42**, with no variable labels.
-A caller-supplied path is never recorded; unknown paths map to \`Unknown\`.
+A caller-supplied path is never recorded; unknown paths map to `Unknown`.
 
 The classification is **coarse** and is not a fine-grained authentication event
 stream. HTTP 401 covers both authentication rejection and challenge-required;
-those cases are deliberately combined as \`DeniedOrChallenged\`. HTTP 200 on
-signup includes both eligible requests and \`UsernameExistsException\`, as
+those cases are deliberately combined as `DeniedOrChallenged`. HTTP 200 on
+signup includes both eligible requests and `UsernameExistsException`, as
 required by the existing anti-enumeration policy. A recovery request HTTP 202
 does **not** mean a code was delivered or that an account exists. A 503 is an
 indeterminate failure, not proof of rollback. No automatic retry is authorized
@@ -27,7 +27,7 @@ from a metric event.
 
 ## Privacy and execution
 
-- The default \`NoOpAuthObservationSink\` emits **nothing**.
+- The default `NoOpAuthObservationSink` emits **nothing**.
 - An external sink must be explicitly injected into the Lambda constructor;
   this change does not configure logging, CloudWatch custom metrics,
   telemetry services or user identification.
