@@ -17,6 +17,7 @@ public partial class Auth
     private readonly IEnrollmentGateway _enrollmentGateway;
     private readonly IPasswordRecoveryGateway _passwordRecoveryGateway;
     private readonly AuthenticationService _authenticationService;
+    private readonly IAuthObservationSink _observations;
 
     private readonly string _userPoolId;
     private readonly string _clientId;
@@ -39,7 +40,8 @@ public partial class Auth
     public Auth(IAmazonCognitoIdentityProvider cognitoClient, string? userPoolId,
         string? clientId, IEnrollmentGateway? enrollmentGateway,
         IPasswordRecoveryGateway? passwordRecoveryGateway = null,
-        IAuthenticationGateway? authenticationGateway = null)
+        IAuthenticationGateway? authenticationGateway = null,
+        IAuthObservationSink? observations = null)
     {
         _cognitoClient = cognitoClient ?? throw new ArgumentNullException(nameof(cognitoClient));
         _userPoolId = !string.IsNullOrWhiteSpace(userPoolId) ? userPoolId :
@@ -52,33 +54,67 @@ public partial class Auth
         _authenticationService = new AuthenticationService(
             authenticationGateway ?? new CognitoAuthenticationGateway(
                 _cognitoClient, _userPoolId, _clientId));
+        _observations = observations ?? NoOpAuthObservationSink.Instance;
     }
 
     public async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        var route = AuthRoute.Unknown;
+        APIGatewayProxyResponse result;
         try
         {
-            var route = AuthRoutes.Resolve(request.Path);
+            route = AuthRoutes.Resolve(request.Path);
             if (route is AuthRoute.Unknown)
-                return Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
-
-            if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
-                return Response(BadRequest, new { Message = "Invalid JSON object" });
-
-            return route switch
-            {
-                AuthRoute.Authenticate => await Authenticate(parameters!),
-                AuthRoute.NewPasswordChallenge => await NewPassword(parameters!),
-                AuthRoute.SignUp => await SignUp(parameters!),
-                AuthRoute.ConfirmSignUp => await ConfirmSignUp(parameters!),
-                AuthRoute.ForgotPassword => await StartPasswordRecovery(parameters!),
-                AuthRoute.ConfirmForgotPassword => await ConfirmPasswordRecovery(parameters!),
-                _ => Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" })
-            };
+                result = Response(Unauthorized, new { Message = "Authentication failed", Error = "unknown path" });
+            else if (!RecordRequestParser.TryParseFields(request.Body, out var parameters))
+                result = Response(BadRequest, new { Message = "Invalid JSON object" });
+            else
+                result = await DispatchAsync(route, parameters!);
         }
         catch
         {
-            return Response(InternalServerError, new { Message = "Internal error" });
+            result = Response(InternalServerError, new { Message = "Internal error" });
         }
+
+        // The only allowed observation dimensions are finite enums, derived
+        // from trusted dispatch/status codes, never request or response bodies.
+        // A failing optional sink must not change authentication outcomes.
+        try
+        {
+            _observations.Record(new AuthObservation(route, ClassifyStatus(result.StatusCode)));
+        }
+        catch
+        {
+            // Deliberately do not log sink failures or request/response details.
+        }
+
+        return result;
     }
+
+    private Task<APIGatewayProxyResponse> DispatchAsync(
+        AuthRoute route, Dictionary<string, object> parameters) => route switch
+    {
+        AuthRoute.Authenticate => Authenticate(parameters),
+        AuthRoute.NewPasswordChallenge => NewPassword(parameters),
+        AuthRoute.SignUp => SignUp(parameters),
+        AuthRoute.ConfirmSignUp => ConfirmSignUp(parameters),
+        AuthRoute.ForgotPassword => StartPasswordRecovery(parameters),
+        AuthRoute.ConfirmForgotPassword => ConfirmPasswordRecovery(parameters),
+        _ => Task.FromResult(Response(Unauthorized, new
+        {
+            Message = "Authentication failed",
+            Error = "unknown path"
+        }))
+    };
+
+    private static AuthObservationKind ClassifyStatus(int statusCode) =>
+        (System.Net.HttpStatusCode)statusCode switch
+        {
+            OK => AuthObservationKind.Succeeded,
+            Accepted => AuthObservationKind.Accepted,
+            BadRequest => AuthObservationKind.InvalidInput,
+            Unauthorized => AuthObservationKind.DeniedOrChallenged,
+            ServiceUnavailable => AuthObservationKind.Unavailable,
+            _ => AuthObservationKind.Failed
+        };
 }
