@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add an opt-in, no-op-by-default authentication observation boundary with enum-only route/outcome dimensions, no PII or tokens, exactly one emission attempt per HTTP request and non-disruptive sink errors.
+
 - Move Cognito login/challenge completion and provider-error classification into a typed application service; retain legacy HTTP response mapping and fail-closed token requirements. Add fake-gateway outcome regression tests.
 
 - Centralize the v1 Cognito Lambda route literals behind an enum-backed route contract; preserve all existing route names and fail-closed unknown-path behavior with regression tests.
