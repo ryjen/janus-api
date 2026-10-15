@@ -1,5 +1,7 @@
 # Unreleased
 
+- Move Cognito login/challenge completion and provider-error classification into a typed application service; retain legacy HTTP response mapping and fail-closed token requirements. Add fake-gateway outcome regression tests.
+
 - Centralize the v1 Cognito Lambda route literals behind an enum-backed route contract; preserve all existing route names and fail-closed unknown-path behavior with regression tests.
 
 - Distinguish Cognito login and required-new-password challenge rejections (generic 401) from upstream or unknown-effect errors (generic 503), using a typed exception-classification policy and fake-provider regression tests. No API routes, success payloads, IAM or AWS resources changed.
