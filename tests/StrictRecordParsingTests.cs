@@ -37,6 +37,30 @@ public sealed class StrictRecordParsingTests
         Assert.NotNull(parsed);
     }
 
+    [Theory]
+    [InlineData("{\"rank\":1,}")]
+    [InlineData("{\"rank\":/*comment*/1}")]
+    [InlineData("{\"rank\":1 // comment\n}")]
+    [InlineData("{'rank':1}")]
+    [InlineData("{rank:1}")]
+    [InlineData("{\"rank\":NaN}")]
+    [InlineData("{\"rank\":Infinity}")]
+    [InlineData("{\"rank\":1,\"data\":[1,2,]}")]
+    public void OptInParserRejectsNonstandardJsonExtensions(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out var parsed));
+        Assert.Null(parsed);
+    }
+
+    [Fact]
+    public void OptInParserAcceptsRfcJsonWithTrailingWhitespace()
+    {
+        const string json = "{\"rank\":1,\"data\":[{\"level\":2}]} \r\n\t";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, out var parsed));
+        Assert.NotNull(parsed);
+        Assert.True(parsed.Fields.ContainsKey("rank"));
+    }
+
     [Fact]
     public void LegacyParserBehaviorNotChanged()
     {
