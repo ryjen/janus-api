@@ -105,9 +105,18 @@ Proposed additive migration sequence (not active):
   approved access, and verify restorability into a **separate destination**.
   A stack-name-derived new table is not automatically a restore.
 - Produce a versioned, private manifest of source snapshot timestamp,
-  algorithm/version, destination, transformed-record count, immutable content
-  digest, rejected-record count and provenance. Keep sensitive keys/records
-  out of public logs and PR bodies.
+  algorithm/version, destination, transformed-record count, SHA-256
+  content digest, rejected-record count and provenance. Compute per-batch
+  and whole-manifest SHA-256 digests over **canonical, versioned** record
+  representations, avoiding unstable unordered JSON serialization.
+  Verify source snapshot inventory and digests **before** conversion,
+  and recompute destination counts/digests after all writes and retry
+  reconciliation. Record the conversion algorithm/manifest signature
+  and verification owner privately. A mismatch blocks cutover; never
+  report incomplete/missing records as a successful migration.
+  Store the manifest and digests with scoped private access and
+  encryption; never publish raw or trivially reversible per-subject hashes
+  in logs/PRs, as these can leak subject existence.
 - Transform idempotently in batches with bounded memory and retry/backoff for
   transient throttling; use conditional writes to avoid overwriting a
   previously provisioned account or player record. Do not accept a
