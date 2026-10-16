@@ -103,6 +103,57 @@ public sealed class StrictJsonGrammarTests
     }
 
     [Fact]
+    public void CandidateV2AcceptsValidNestedJsonWithTrailingWhitespace()
+    {
+        const string json = "{\"rank\":1,\"data\":[{\"level\":2}]} \r\n\t";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, out var request));
+        Assert.NotNull(request);
+        Assert.True(request.Fields.ContainsKey("rank"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StrictGatewayAcceptsValidJsonInBothBodyRepresentations(bool encoded)
+    {
+        const string json = "{\"rank\":2,\"label\":\"example\"} \n";
+        var envelope = new APIGatewayProxyRequest
+        {
+            Headers = new Dictionary<string, string>
+            {
+                ["Content-Type"] = "application/json"
+            },
+            Body = encoded
+                ? System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
+                : json,
+            IsBase64Encoded = encoded
+        };
+        Assert.True(StrictRecordRequest.TryParseJson(envelope, Limits, ExampleSchema, out var mutation));
+        Assert.NotNull(mutation);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StrictGatewayRejectsTrailingCommaInBothBodyRepresentations(bool encoded)
+    {
+        const string json = "{\"rank\":2,}";
+        var envelope = new APIGatewayProxyRequest
+        {
+            Headers = new Dictionary<string, string>
+            {
+                ["Content-Type"] = "application/json"
+            },
+            Body = encoded
+                ? System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
+                : json,
+            IsBase64Encoded = encoded
+        };
+        Assert.False(StrictRecordRequest.TryParseJson(envelope, Limits, ExampleSchema, out var mutation));
+        Assert.Null(mutation);
+    }
+
+    [Fact]
     public void LegacyCompatibilityPathStillAcceptsUnversionedFields()
     {
         Assert.True(RecordRequestParser.TryParseMutation("{\"legacy\":true}", out var mutation));
