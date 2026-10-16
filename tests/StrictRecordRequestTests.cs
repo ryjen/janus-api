@@ -30,6 +30,27 @@ public sealed class StrictRecordRequestTests
         Assert.True(mutation.Fields.ContainsKey("rank"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void VersionedGatewayPreservesIsoTimestampAsString(bool encoded)
+    {
+        const string timestamp = "2026-10-16T14:55:00Z";
+        const string json = "{\"label\":\"" + timestamp + "\"}";
+        var schema = new RecordFieldSchema(
+            new Dictionary<string, JTokenType> { ["label"] = JTokenType.String });
+        var request = new APIGatewayProxyRequest
+        {
+            Body = encoded ? System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json)) : json,
+            IsBase64Encoded = encoded,
+            Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" }
+        };
+
+        Assert.True(StrictRecordRequest.TryParseJson(request, Limits, schema, out var mutation));
+        Assert.NotNull(mutation);
+        Assert.Equal(timestamp, Assert.IsType<string>(mutation.Fields["label"]));
+    }
+
     [Fact]
     public void RejectsInvalidEnvelopeWithoutMutation()
     {
