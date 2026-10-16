@@ -81,7 +81,13 @@ Proposed additive migration sequence (not active):
 - Never forge email verification or synthesize a trusted Cognito `sub`
   from caller data. If subjects change, build a private, access-controlled
   old-subject ↔ new-subject reconciliation manifest with recorded authorization
-  and deletion/retention policy. Do **not** commit this mapping.
+  and deletion/retention policy. Encrypt the manifest at rest using an
+  approved customer-managed encryption key with scoped decrypt access,
+  change/audit logging and separately authorized backup recovery. Store it
+  only in a private, access-controlled operator evidence location; redact
+  individual subjects from CI, PRs, dashboards and public logs. Record
+  immutable checksums and a bounded retention/deletion date. Do **not**
+  commit or publicly export the mapping.
 - Test duplicate email/account collision, verification state, abandoned and
   confirmed users, recovery codes, MFA and session expiry, off-by-one
   pagination, rate/throttle handling, account-provisioning trigger failures,
@@ -157,6 +163,41 @@ Suggested acceptance scenarios for the disposable environment include:
   retry **only once v2 semantics are explicitly approved and implemented**.
 - Simulated provider outage, throttling and partial write; classify unknown
   effects without assuming an AWS timeout rolled back.
+
+## Explicit cutover and rollback gate
+
+**Go/no-go immediately before routing any v2 traffic:**
+- Confirm destination restore from an approved source PITR snapshot by a
+  checksum-verified *private* manifest and independently repeated counts.
+  Record the exact snapshot time and the catch-up/writes-freeze boundary.
+- Independently prove that the prior v1 API stage, authorizer, Cognito pool,
+  usage plan, Lambda versions and subject-to-record mappings remain
+  reachable by the approved rollback operator. Preserve old endpoints and
+  their infrastructure resources throughout the overlap window.
+- Confirm ownership of a tested reversible DNS/API-stage route switch,
+  a rollback time window, synthetic smoke tests, write replay/catch-up
+  rules and alarms. Do not make the old pool authoritative for new user
+  subjects without the verified private subject mapping.
+
+**Abort or roll back on** unverified identity/subject mapping, a missing
+or mismatched record manifest, failed conditional persistence, unexplained
+queue/DLQ accumulation, incorrect authorizer results, cross-subject data
+access, failed v1/v2 compatibility checks, material cost/latency breach,
+or failure of the approved reconciliation/monitoring controls.
+
+**Rollback sequence:** stop v2 writes at the boundary; prevent newly
+divergent traffic; verify a stable snapshot and approved replay/delta
+manifest; restore the correct route, authorizer and API-key configuration
+without weakening authentication; reconcile accepted post-snapshot writes
+under independent review; prove correct reads and idempotent messages with
+synthetic users; and only then reopen normal traffic. A route toggle alone
+is not rollback when identity or Dynamo data has diverged.
+
+**Stop conditions:** if writes cannot be safely paused/caught up, or
+reconciliation evidence is incomplete, stop cutover rather than roll back
+to an older data image and silently discard acknowledged changes.
+Retain destination and incident evidence privately until an explicitly
+approved deletion and cost cleanup.
 
 ## Release and rollback decisions
 
