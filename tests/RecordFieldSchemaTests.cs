@@ -61,6 +61,18 @@ public sealed class RecordFieldSchemaTests
     }
 
     [Theory]
+    [InlineData("{\"label\":\"2026-10-16T14:55:00Z\"} true")]
+    [InlineData("{\"label\":\"2026-10-16T14:55:00Z\"} {}")]
+    public void DirectSchemaValidationRejectsTrailingTopLevelJson(string json)
+    {
+        var schema = new RecordFieldSchema(
+            new Dictionary<string, JTokenType> { ["label"] = JTokenType.String });
+        Assert.False(schema.Matches(json));
+        Assert.False(RecordRequestParser.TryParseMutation(
+            json, Limits, schema, out _));
+    }
+
+    [Theory]
     [InlineData("{\"rank\":\"4\"}")]
     [InlineData("{\"rank\":null}")]
     [InlineData("{\"extra\":true}")]
