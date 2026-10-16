@@ -90,6 +90,21 @@ public sealed class StrictRecordRequestTests
         Assert.Null(mutation);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsNonstandardJsonBeforeApplyingSchema(bool encoded)
+    {
+        const string json = "{\"rank\":1,}";
+        var envelope = new APIGatewayProxyRequest
+        {
+            Body = encoded ? System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json)) : json,
+            IsBase64Encoded = encoded
+        };
+        Assert.False(StrictRecordRequest.TryParse(envelope, Limits, Schema, out var mutation));
+        Assert.Null(mutation);
+    }
+
     [Fact]
     public void RejectsExcessiveNestingBeforeApplyingSchema()
     {
