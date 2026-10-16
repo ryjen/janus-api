@@ -46,7 +46,8 @@ the self-hosted flake toolchain (#51) is independently qualified.
 | Missing account | Confirmed user prior to record materialization | Authenticated verified-email reconciliation safely queues own account |
 | Queue outage | Denied/timeout SQS publish after confirmation | Treat effect as unknown, do not claim Cognito rollback; authenticated reconciliation recovers |
 | Queue replay | Two identical delivery events | Conditional Dynamo create exactly once, no overwrite |
-| Malformed message | Wrong event, missing `sub`, incorrect verified-email flag | Fail closed, no account creation, tested retry/DLQ disposition |
+| Cognito trigger boundary | Wrong `triggerSource`, unverified email, missing `request.userAttributes.sub` or email | Validate at `VerifiedEnrollment.FromCognitoEvent` **before** SQS publishing; no account message for rejected inputs. A non-PostConfirmation event is ignored. These are not SQS retry/DLQ cases. |
+| Malformed SQS account message | Null or malformed JSON, missing/blank `Id` or `Email` in the `Model.Account` message, invalid persistence input | `AccountProvisioner` consumes the queue's account DTO (not a Cognito trigger). Validate non-provisioning and bounded retry/redrive/DLQ according to the configured Lambda SQS integration; do not assume a `triggerSource` or `email_verified` field is checked at this boundary. |
 | DLQ / backoff | Repeated transient Dynamo/SQS failure | Bounded retry, expected queue visibility/redrive, actionable private recovery procedure |
 | Dynamo conflict | Duplicate create and two writers with stale v2 revision | At most one conditional winner; **v2 not yet implemented**; don't present as v1 result |
 | Parser boundary | Invalid UTF-8, base64, duplicates, deep/massive objects, conflicting headers | For **future v2 only**, bounded rejection before persistence; keep v1 unchanged |
