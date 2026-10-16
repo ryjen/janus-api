@@ -45,6 +45,41 @@ public sealed class StrictJsonGrammarTests
         Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
     }
 
+    [Theory]
+    [InlineData("{\"rank\":1,\"r\\u0061nk\":2}")]
+    [InlineData("{\"rank\":1,\"\\u0072ank\":2}")]
+    [InlineData("{\"meta\":[{\"rank\":1,\"r\\u0061nk\":2}]}")]
+    [InlineData("{\"\\u0061\":1,\"a\":2}")]
+    public void CandidateV2RejectsEquivalentEscapedKeysInNestedScopes(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
+
+    [Theory]
+    [InlineData("{\"label\":\"\\uD800\"}")]
+    [InlineData("{\"label\":\"\\uDC00\"}")]
+    [InlineData("{\"label\":\"\\uD800\\uD800\"}")]
+    [InlineData("{\"label\":\"\\uD800\\u0041\"}")]
+    [InlineData("{\"label\":\"\\u0041\\uDC00\"}")]
+    public void CandidateV2RejectsUnpairedEscapedSurrogateCodeUnits(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
+
+    [Fact]
+    public void CandidateV2AcceptsPairedEscapedSurrogates()
+    {
+        const string json = "{\"label\":\"\\uD83D\\uDE00\"}";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, ExampleSchema, out _));
+    }
+
+    [Fact]
+    public void CandidateV2DoesNotTreatEscapedBackslashAsUnicodeSequence()
+    {
+        const string json = "{\"label\":\"\\\\uD800\"}";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, ExampleSchema, out _));
+    }
+
     [Fact]
     public void CandidateV2AcceptsEscapedQuotationAndCommentLikeTextInString()
     {
