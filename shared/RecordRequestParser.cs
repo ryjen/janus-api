@@ -2,6 +2,7 @@
 
 using Newtonsoft.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace Janus;
 
@@ -38,40 +39,50 @@ public static class RecordRequestParser
         }
         catch (EncoderFallbackException) { return false; }
         if (!HasValidEscapedSurrogates(body)) return false;
+        // Json.NET permits non-RFC extensions such as comments, single-quoted
+        // strings, unquoted names and trailing commas. V2 needs a strict
+        // lexical pass before its existing compatibility representation.
+        // The decoded payload is already bounded by MaxUtf8Bytes above.
         try
         {
-            using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
+            var utf8 = StrictUtf8.GetBytes(body);
+            var options = new JsonReaderOptions
+            {
+                MaxDepth = limits.MaxDepth,
+                AllowTrailingCommas = false,
+                CommentHandling = JsonCommentHandling.Disallow
+            };
+            var reader = new Utf8JsonReader(utf8, options);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+                return false;
+
             var objectKeys = new Stack<HashSet<string>>();
-            var rootSeen = false;
+            objectKeys.Push(new HashSet<string>(StringComparer.Ordinal));
             var rootCompleted = false;
-            var firstToken = true;
             while (reader.Read())
             {
-                if (firstToken)
-                {
-                    firstToken = false;
-                    if (reader.TokenType != JsonToken.StartObject) return false;
-                }
                 switch (reader.TokenType)
                 {
-                    case JsonToken.StartObject:
-                        if (objectKeys.Count == 0 && !rootSeen) rootSeen = true;
+                    case JsonTokenType.StartObject:
                         objectKeys.Push(new HashSet<string>(StringComparer.Ordinal));
                         break;
-                    case JsonToken.PropertyName:
-                        if (objectKeys.Count == 0 || !objectKeys.Peek().Add((string)reader.Value!))
+                    case JsonTokenType.PropertyName:
+                        if (objectKeys.Count == 0 ||
+                            !objectKeys.Peek().Add(reader.GetString()!))
                             return false;
                         break;
-                    case JsonToken.EndObject:
+                    case JsonTokenType.EndObject:
                         if (objectKeys.Count == 0) return false;
                         objectKeys.Pop();
                         if (objectKeys.Count == 0) rootCompleted = true;
                         break;
                 }
             }
-            if (!rootSeen || !rootCompleted || objectKeys.Count != 0) return false;
+            if (!rootCompleted || objectKeys.Count != 0 ||
+                reader.BytesConsumed != utf8.Length)
+                return false;
         }
-        catch (JsonException) { return false; }
+        catch (System.Text.Json.JsonException) { return false; }
         if (!TryParseMutation(body, out var parsed)) return false;
         request = parsed;
         return true;
@@ -102,7 +113,7 @@ public static class RecordRequestParser
             fields = body.ToParams();
             return fields is not null;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return false;
         }
