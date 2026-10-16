@@ -1,5 +1,6 @@
 #nullable enable
 
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Janus;
@@ -18,9 +19,20 @@ public sealed class RecordFieldSchema
 
     public bool Matches(string json)
     {
+        // JSON has a single string token type. Json.NET's default
+        // DateParseHandling.DateTime would silently reinterpret ISO-formatted
+        // string values as JTokenType.Date, rejecting a valid string field.
+        // Preserve the original JSON token type while enforcing schema types.
         JObject obj;
-        try { obj = JObject.Parse(json); }
-        catch (Newtonsoft.Json.JsonException) { return false; }
+        try
+        {
+            using var reader = new JsonTextReader(new StringReader(json))
+            {
+                DateParseHandling = DateParseHandling.None
+            };
+            obj = JObject.Load(reader);
+        }
+        catch (JsonException) { return false; }
 
         foreach (var property in obj.Properties())
         {
