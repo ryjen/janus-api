@@ -71,7 +71,7 @@ The project was formerly named **Janus API**. The GitHub repository is now `ryje
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Record application boundaries and follow-up design](docs/record-boundary.md)
 - [Player API compatibility baseline and proposed v2 contract](docs/player-api-contract.md)
-- [Proposed versioning, identity/data migration, staging and rollback runbook](docs/versioned-migration-runbook.md) (**design-only; migration, AWS tests and release not authorized**)
+- [Proposed versioning, identity/data migration, staging and rollback runbook](docs/versioned-migration-runbook.md) (**design-only; no migration, AWS tests or release authorized**)
 - [Disposable AWS identity and record acceptance protocol](docs/disposable-aws-acceptance.md)
 - [Client-grounded v2 player field inventory and qualification](docs/player-v2-inventory.md)
 - [Security limitations and reporting](SECURITY.md)
