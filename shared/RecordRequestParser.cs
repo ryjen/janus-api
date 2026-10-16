@@ -1,6 +1,5 @@
 #nullable enable
 
-using Newtonsoft.Json;
 using System.Text;
 using System.Text.Json;
 
@@ -84,7 +83,7 @@ public static class RecordRequestParser
             }
             if (!rootSeen || !rootCompleted || objectKeys.Count != 0) return false;
         }
-        catch (JsonException) { return false; }
+        catch (System.Text.Json.JsonException) { return false; }
         if (!TryParseMutation(body, out var parsed)) return false;
         request = parsed;
         return true;
@@ -115,7 +114,7 @@ public static class RecordRequestParser
             fields = body.ToParams();
             return fields is not null;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return false;
         }
