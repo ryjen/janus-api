@@ -72,9 +72,25 @@ public static class RecordRequestParser
             if (!rootSeen || !rootCompleted || objectKeys.Count != 0) return false;
         }
         catch (JsonException) { return false; }
-        if (!TryParseMutation(body, out var parsed)) return false;
-        request = parsed;
-        return true;
+        // Materialize with the same lexical JSON types validated above.
+        // The legacy ToParams() adapter uses Json.NET defaults and may
+        // coerce an ISO-formatted JSON string into a DateTime object.
+        // This strict/v2-only path must not reinterpret user-supplied fields.
+        try
+        {
+            var fields = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                body,
+                new JsonSerializerSettings
+                {
+                    DateParseHandling = DateParseHandling.None,
+                    MaxDepth = limits.MaxDepth
+                });
+            if (fields is null) return false;
+            request = new RecordMutationRequest(fields);
+            return true;
+        }
+        catch (JsonException) { return false; }
+        catch (ArgumentException) { return false; }
     }
 
     // Schema application is opt-in; strict parsing runs first so duplicate
