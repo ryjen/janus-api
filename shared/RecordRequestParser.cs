@@ -2,6 +2,7 @@
 
 using Newtonsoft.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace Janus;
 
@@ -40,29 +41,41 @@ public static class RecordRequestParser
         if (!HasValidEscapedSurrogates(body)) return false;
         try
         {
-            using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
+            // Json.NET accepts non-standard JSON (comments, single-quoted
+            // strings, unquoted property names and trailing commas). The
+            // explicitly versioned boundary must validate RFC 8259 grammar
+            // before invoking the legacy compatibility deserializer.
+            // Byte allocation is bounded by the validated MaxUtf8Bytes above.
+            var utf8 = StrictUtf8.GetBytes(body);
+            var reader = new Utf8JsonReader(utf8, new JsonReaderOptions
+            {
+                MaxDepth = limits.MaxDepth,
+                CommentHandling = JsonCommentHandling.Disallow,
+                AllowTrailingCommas = false
+            });
             var objectKeys = new Stack<HashSet<string>>();
             var rootSeen = false;
             var rootCompleted = false;
             var firstToken = true;
             while (reader.Read())
             {
+                if (rootCompleted) return false; // no second top-level value
                 if (firstToken)
                 {
                     firstToken = false;
-                    if (reader.TokenType != JsonToken.StartObject) return false;
+                    if (reader.TokenType != JsonTokenType.StartObject) return false;
                 }
                 switch (reader.TokenType)
                 {
-                    case JsonToken.StartObject:
+                    case JsonTokenType.StartObject:
                         if (objectKeys.Count == 0 && !rootSeen) rootSeen = true;
                         objectKeys.Push(new HashSet<string>(StringComparer.Ordinal));
                         break;
-                    case JsonToken.PropertyName:
-                        if (objectKeys.Count == 0 || !objectKeys.Peek().Add((string)reader.Value!))
+                    case JsonTokenType.PropertyName:
+                        if (objectKeys.Count == 0 || !objectKeys.Peek().Add(reader.GetString()!))
                             return false;
                         break;
-                    case JsonToken.EndObject:
+                    case JsonTokenType.EndObject:
                         if (objectKeys.Count == 0) return false;
                         objectKeys.Pop();
                         if (objectKeys.Count == 0) rootCompleted = true;
