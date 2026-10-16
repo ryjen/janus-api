@@ -31,6 +31,10 @@ public sealed class RecordFieldSchema
                 DateParseHandling = DateParseHandling.None
             };
             obj = JObject.Load(reader);
+            // JObject.Load consumes only the first object. Reject any extra
+            // top-level JSON value or comment rather than silently accepting
+            // a prefix when the schema is used directly.
+            if (reader.Read()) return false;
         }
         catch (JsonException) { return false; }
 
