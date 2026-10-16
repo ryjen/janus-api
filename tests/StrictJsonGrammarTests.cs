@@ -30,6 +30,8 @@ public sealed class StrictJsonGrammarTests
     [InlineData("{\"rank\":01}")]
     [InlineData("{\"rank\":+1}")]
     [InlineData("{\"rank\":NaN}")]
+    [InlineData("{\"rank\":Infinity}")]
+    [InlineData("{\"rank\":1,\"data\":[1,2,]}")]
     [InlineData("{\"rank\":.5}")]
     [InlineData("{\"rank\":1} {\"rank\":2}")]
     public void CandidateV2RejectsNonstandardJsonSyntax(string json)
