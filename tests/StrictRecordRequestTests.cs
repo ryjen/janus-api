@@ -30,6 +30,22 @@ public sealed class StrictRecordRequestTests
         Assert.True(mutation.Fields.ContainsKey("rank"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsNonStandardJsonInPlainAndBase64Envelopes(bool encoded)
+    {
+        const string json = "{\"rank\":2,}";
+        var envelope = new APIGatewayProxyRequest
+        {
+            Body = encoded ? System.Convert.ToBase64String(Encoding.UTF8.GetBytes(json)) : json,
+            IsBase64Encoded = encoded
+        };
+
+        Assert.False(StrictRecordRequest.TryParse(envelope, Limits, Schema, out var mutation));
+        Assert.Null(mutation);
+    }
+
     [Fact]
     public void RejectsInvalidEnvelopeWithoutMutation()
     {
