@@ -37,6 +37,30 @@ public sealed class StrictRecordParsingTests
         Assert.NotNull(parsed);
     }
 
+    [Theory]
+    [InlineData("{'rank':1}")]
+    [InlineData("{rank:1}")]
+    [InlineData("{\"rank\":1,}")]
+    [InlineData("{\"data\":[1,2,]}")]
+    [InlineData("{\"rank\":/* comment */1}")]
+    [InlineData("{\"rank\":NaN}")]
+    [InlineData("{\"rank\":Infinity}")]
+    public void RejectsJsonNetJavaScriptExtensionsInOptInParser(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out var request));
+        Assert.Null(request);
+    }
+
+    [Theory]
+    [InlineData("{\"label\":\"/* text */\",\"rank\":1}")]
+    [InlineData("{\"label\":\"it's JSON\",\"rank\":1}")]
+    [InlineData("{\"label\":\"comma, and quote: \\\"\",\"rank\":1}")]
+    public void PreservesValidJsonStringsContainingExtensionLikeCharacters(string json)
+    {
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, out var request));
+        Assert.NotNull(request);
+    }
+
     [Fact]
     public void LegacyParserBehaviorNotChanged()
     {
