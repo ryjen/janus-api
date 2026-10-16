@@ -1,5 +1,7 @@
 # Unreleased
 
+- Keep ISO-formatted JSON string values as strings during opt-in/versioned player request parsing and schema validation, with plain/base64 transport regressions; reject trailing top-level values in direct schema checks. Legacy v1 parsing is unchanged.
+
 - Add an opt-in, fixed-size in-memory authentication outcome counter using enum-only dimensions and atomic increments; no arbitrary synchronous callback or external telemetry, preserving authentication response availability.
 
 - Redact Cognito ID tokens and opaque challenge sessions from default authentication result string formatting; preserve actual result fields for protocol use and test the diagnostic representations.
