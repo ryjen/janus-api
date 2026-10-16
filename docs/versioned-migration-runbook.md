@@ -86,7 +86,10 @@ Proposed additive migration sequence (not active):
   change/audit logging and separately authorized backup recovery. Store it
   only in a private, access-controlled operator evidence location; redact
   individual subjects from CI, PRs, dashboards and public logs. Record
-  immutable checksums and a bounded retention/deletion date. Do **not**
+  immutable checksums and a bounded retention/deletion date. Record a
+  key-rotation policy and versioned, independently reviewed key-access
+  permissions for every approved change, including prior-key decrypt
+  requirements during the retention window. Do **not**
   commit or publicly export the mapping.
 - Test duplicate email/account collision, verification state, abandoned and
   confirmed users, recovery codes, MFA and session expiry, off-by-one
@@ -110,8 +113,11 @@ Proposed additive migration sequence (not active):
   and whole-manifest SHA-256 digests over **canonical, versioned** record
   representations, avoiding unstable unordered JSON serialization.
   Verify source snapshot inventory and digests **before** conversion,
-  and recompute destination counts/digests after all writes and retry
-  reconciliation. Record the conversion algorithm/manifest signature
+  and recompute destination **batch and whole-manifest** SHA-256 digests
+  only after the final writes and retry reconciliation have completed.
+  Compare source and transformed-destination digests using the approved,
+  versioned conversion algorithm and independently sign off exact count
+  and digest matches before any route change. Record the conversion algorithm/manifest signature
   and verification owner privately. A mismatch blocks cutover; never
   report incomplete/missing records as a successful migration.
   Store the manifest and digests with scoped private access and
@@ -198,8 +204,11 @@ or failure of the approved reconciliation/monitoring controls.
 divergent traffic; verify a stable snapshot and approved replay/delta
 manifest; restore the correct route, authorizer and API-key configuration
 without weakening authentication; reconcile accepted post-snapshot writes
-under independent review; prove correct reads and idempotent messages with
-synthetic users; and only then reopen normal traffic. A route toggle alone
+under independent review; independently reverify the private identity
+old-subject ↔ new-subject mapping integrity against its immutable signed
+manifest after rollback, including key-access audit evidence; prove
+correct reads and idempotent messages with synthetic users; and only
+then reopen normal traffic. A route toggle alone
 is not rollback when identity or Dynamo data has diverged.
 
 **Stop conditions:** if writes cannot be safely paused/caught up, or
