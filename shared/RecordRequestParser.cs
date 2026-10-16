@@ -38,6 +38,26 @@ public static class RecordRequestParser
         }
         catch (EncoderFallbackException) { return false; }
         if (!HasValidEscapedSurrogates(body)) return false;
+
+        // Json.NET accepts JavaScript extensions (comments, single-quoted
+        // strings, unquoted keys and trailing commas). The proposed v2
+        // boundary must require RFC-style JSON before applying duplicate-key
+        // detection and the legacy dictionary conversion. This extra parse
+        // is bounded by MaxUtf8Bytes and MaxDepth; the v1 path is untouched.
+        try
+        {
+            using var syntax = System.Text.Json.JsonDocument.Parse(
+                body, new System.Text.Json.JsonDocumentOptions
+                {
+                    AllowTrailingCommas = false,
+                    CommentHandling = System.Text.Json.JsonCommentHandling.Disallow,
+                    MaxDepth = limits.MaxDepth
+                });
+            if (syntax.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return false;
+        }
+        catch (System.Text.Json.JsonException) { return false; }
+
         try
         {
             using var reader = new JsonTextReader(new StringReader(body)) { MaxDepth = limits.MaxDepth };
