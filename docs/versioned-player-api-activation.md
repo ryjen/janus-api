@@ -5,7 +5,7 @@ Status: **proposed / not deployed**. The deployed `ModelHandler` remains the com
 ## Current boundaries
 
 - `RecordRequestEnvelope.TryDecode` optionally decodes plain/base64 API Gateway bodies with strict UTF-8 and a decoded-byte budget.
-- `RecordRequestParser.TryParseMutation(body, limits, ...)` enforces a bounded JSON object, duplicate-property rejection, depth and Unicode checks.
+- `RecordRequestParser.TryParseMutation(body, limits, ...)` checks bounded UTF-8 bytes/depth and RFC 8259 JSON lexical grammar using `System.Text.Json.Utf8JsonReader`: no comments, trailing commas, single-quoted strings, unquoted names, malformed numeric literals or extra top-level values. It rejects duplicate **decoded** property names and malformed escaped surrogates. The separate legacy overload retains v1-compatible Json.NET conversion.
 - `RecordFieldSchema` is an opt-in, exact-case property-name and JSON token-type allowlist.
 - `StrictRecordRequest.TryParse` composes these checks; **no Lambda handler calls it**.
 - `SubjectRecordService` binds persistence to authenticated Cognito `sub`; caller-provided `id` cannot select another record. Authorization must remain independent of payload validation.
