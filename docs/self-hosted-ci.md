@@ -17,19 +17,24 @@ Dubnium JIT identity, trust admission, and required check are qualified.
 The source-validated environment pins `nixos-26.05` to the same input revision
 and integrity hash already present in `ryjen/ops-cadence`. This **does not prove**
 that the Nix package set contains a working .NET 10 + AWS SAM CLI combination:
-`nix flake check`, locked package materialization, version/compatibility
-checks and actual packaging on an approved Linux host are still required.
-The prior hosted CI isolated SAM 1.168.0 from stand-alone cfn-lint 1.57.2
-because their Python dependency constraints conflict. Compare the flake-provided
-SAM/cfn-lint tools against that contract before calling this equivalent;
-do not silently install tools with ambient `pip` or `setup-dotnet`.
+`nix flake check`, locked package materialization and actual packaging
+on an approved Linux host are still required. **Verified source mismatch:**
+the exact pinned Nixpkgs revision currently declares SAM CLI **1.160.0**
+and `cfn-lint` **1.43.3** in its package definitions. The previously qualified
+hosted CI instead pinned SAM CLI **1.168.0** and stand-alone `cfn-lint`
+**1.57.2** (the latter isolated due to incompatible shared Python constraints).
+The staged flake explicitly **fails Nix evaluation** until those qualified
+versions are available from a reviewed new pin or approved package overrides.
+Do not treat copying an existing lock as toolchain validation, weaken the
+version assertions, or silently install dependencies with ambient `pip`
+or `setup-dotnet`. This is a blocked candidate, not an executable CI claim.
 
 ## Proposed single entry point
 
 After independently approved JIT routing:
 
 ```sh
-nix flake check
+nix flake check --no-write-lock-file
 nix develop --command bash ci/validate-source.sh
 ```
 
