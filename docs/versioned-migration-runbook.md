@@ -107,22 +107,36 @@ Proposed additive migration sequence (not active):
 - Obtain a point-in-time restore/export of each source table under dedicated,
   approved access, and verify restorability into a **separate destination**.
   A stack-name-derived new table is not automatically a restore.
-- Produce a versioned, private manifest of source snapshot timestamp,
-  algorithm/version, destination, transformed-record count, SHA-256
-  content digest, rejected-record count and provenance. Compute per-batch
-  and whole-manifest SHA-256 digests over **canonical, versioned** record
-  representations, avoiding unstable unordered JSON serialization.
-  Verify source snapshot inventory and digests **before** conversion,
-  and recompute destination **batch and whole-manifest** SHA-256 digests
-  only after the final writes and retry reconciliation have completed.
-  Compare source and transformed-destination digests using the approved,
-  versioned conversion algorithm and independently sign off exact count
-  and digest matches before any route change. Record the conversion algorithm/manifest signature
-  and verification owner privately. A mismatch blocks cutover; never
-  report incomplete/missing records as a successful migration.
-  Store the manifest and digests with scoped private access and
-  encryption; never publish raw or trivially reversible per-subject hashes
-  in logs/PRs, as these can leak subject existence.
+- Produce a versioned, access-controlled **three-part** migration evidence
+  package: (1) a raw **source snapshot** inventory/digest for provenance,
+  (2) an **expected destination** inventory/digest computed by applying the
+  approved versioned conversion to the immutable source snapshot, including
+  authorized old-subject → new-subject substitutions, and (3) a separately
+  read **actual destination** inventory/digest after all writes/retries.
+  Never demand equality of the raw-source and converted-destination
+  digests when the transformation is intentionally non-identity.
+- For reproducible SHA-256 checks, define a canonical encoding version,
+  normalized field serialization and unambiguous length-prefix rules.
+  Sort complete records by **canonical table/key bytes** before digesting,
+  independent of DynamoDB scan/page order. Use fixed-size batch boundaries
+  based on that sorted sequence, **not** paginated scan arrival or arbitrary
+  worker partitions; verify per-batch counts/digests and a deterministic
+  whole-manifest digest from the same ordered canonical records.
+  Reject duplicate keys and fail closed if a stable ordering is unavailable.
+- First verify the immutable raw-source snapshot count/digest. Then compute
+  the canonical **expected transformed-source** batches/count/digest under
+  the approved mapping/conversion algorithm, including the exact set of
+  transformed/rejected records. Once destination writes, retries and replay
+  reconciliation are fully complete, independently re-read destination
+  records, apply the same canonical sorting/encoding/partitioning and
+  compare **expected-transformed vs actual-destination** counts and SHA-256
+  digests. Any mismatch, unexpected duplicate or unreconciled reject blocks
+  cutover; never waive the mismatch to accommodate an identity rewrite.
+- Record source snapshot timestamp, source/target roles, algorithm and
+  schema versions, private manifest signatures, exception ledger,
+  independent reviewer and bounded retention/deletion policy. Encrypt
+  manifest data and digests using scoped private access; do not publish
+  individual subject hashes or other linkable identifiers in CI/PRs/logs.
 - Transform idempotently in batches with bounded memory and retry/backoff for
   transient throttling; use conditional writes to avoid overwriting a
   previously provisioned account or player record. Do not accept a
