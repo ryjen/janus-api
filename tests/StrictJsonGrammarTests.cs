@@ -155,6 +155,53 @@ public sealed class StrictJsonGrammarTests
         Assert.Null(mutation);
     }
 
+    [Theory]
+    [InlineData("{\"label\":\"raw\nnewline\"}")]
+    [InlineData("{\"rank\":1.}")]
+    [InlineData("{\"rank\":1e}")]
+    [InlineData("{\"rank\":-}")]
+    [InlineData("{\"rank\":1}not-json")]
+    public void CandidateV2RejectsAdditionalMalformedGrammar(string json)
+    {
+        Assert.False(RecordRequestParser.TryParseMutation(json, Limits, out var request));
+        Assert.Null(request);
+    }
+
+    [Fact]
+    public void CandidateV2CountsNestedArraysTowardsDepthLimit()
+    {
+        const string json = "{\"data\":[[[1]]]}";
+        Assert.False(RecordRequestParser.TryParseMutation(
+            json, new RecordParsingLimits(TestMaxUtf8Bytes, 3), out _));
+        Assert.True(RecordRequestParser.TryParseMutation(
+            json, new RecordParsingLimits(TestMaxUtf8Bytes, 5), out _));
+    }
+
+    [Fact]
+    public void CandidateV2CountsActualUtf8BytesForSupplementaryUnicode()
+    {
+        const string json = "{\"label\":\"😀\"}";
+        var exactBytes = System.Text.Encoding.UTF8.GetByteCount(json);
+        Assert.False(RecordRequestParser.TryParseMutation(
+            json, new RecordParsingLimits(exactBytes - 1, TestMaxDepth), out _));
+        Assert.True(RecordRequestParser.TryParseMutation(
+            json, new RecordParsingLimits(exactBytes, TestMaxDepth), out _));
+    }
+
+    [Fact]
+    public void CandidateV2AllowsRepeatedNamesInSeparateObjects()
+    {
+        const string json = "{\"data\":[{\"score\":1},{\"score\":2}]}";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
+
+    [Fact]
+    public void CandidateV2UsesOrdinalPropertyNameIdentity()
+    {
+        const string json = "{\"rank\":1,\"Rank\":2}";
+        Assert.True(RecordRequestParser.TryParseMutation(json, Limits, out _));
+    }
+
     [Fact]
     public void LegacyCompatibilityPathStillAcceptsUnversionedFields()
     {
