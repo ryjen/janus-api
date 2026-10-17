@@ -1,5 +1,7 @@
 # Unreleased
 
+- Validate opt-in versioned record JSON against strict RFC 8259 token grammar (reject comments, trailing commas, unquoted/single-quoted keys and invalid number spellings), while preserving nested duplicate-key checks and unchanged legacy v1 parsing; add focused regression tests. Source-only candidate; no v2 route is activated.
+
 - Add an opt-in, fixed-size in-memory authentication outcome counter using enum-only dimensions and atomic increments; no arbitrary synchronous callback or external telemetry, preserving authentication response availability.
 
 - Redact Cognito ID tokens and opaque challenge sessions from default authentication result string formatting; preserve actual result fields for protocol use and test the diagnostic representations.
